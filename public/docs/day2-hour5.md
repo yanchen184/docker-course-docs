@@ -1,286 +1,93 @@
-# Day 2 第五小時：Docker 基本指令（下）
+# Day 2 第五小時：映像檔管理
 
 ---
 
 ## 一、前情提要（2 分鐘）
 
-上一堂課學了「取得和執行」：pull、images、run、ps。
+上一堂課：pull、images、run、ps。
 
-這堂課學「管理和清理」：
-- docker stop/start/restart：容器啟停
-- docker rm/rmi：刪除容器和映像檔
-- docker logs：查看日誌
-- docker exec：進入容器
-- docker cp：複製檔案
+本堂課：管理和清理
+- stop/start/restart：容器啟停
+- rm/rmi：刪除容器和映像檔
+- logs：查看日誌
+- exec：進入容器
+- cp：複製檔案
 
 ---
 
 ## 二、容器生命週期操作（15 分鐘）
 
-### 2.1 docker stop - 停止容器
+### 啟停容器
 
 ```bash
-docker stop my-nginx
+docker stop my-nginx       # 優雅關閉（SIGTERM → 10秒 → SIGKILL）
+docker stop -t 0 my-nginx  # 立刻強制終止
+docker start my-nginx      # 啟動已停止的容器
+docker restart my-nginx    # 重啟
+docker kill my-nginx       # 強制終止（直接 SIGKILL）
 ```
 
-送出 SIGTERM 信號，等待容器優雅關閉（預設 10 秒）。超時後送 SIGKILL 強制終止。
-
-**指定等待時間**
+### 暫停/恢復
 
 ```bash
-docker stop -t 30 my-nginx    # 等 30 秒
-docker stop -t 0 my-nginx     # 立刻 SIGKILL
+docker pause my-nginx      # 凍結所有程序
+docker unpause my-nginx    # 解凍
 ```
 
-**停止多個容器**
+### 批次操作
 
 ```bash
-docker stop container1 container2 container3
+docker stop $(docker ps -q)    # 停止所有容器
 ```
-
-**停止所有容器**
-
-```bash
-docker stop $(docker ps -q)
-```
-
-### 2.2 docker start - 啟動已停止的容器
-
-```bash
-docker start my-nginx
-```
-
-容器之前的設定（port、volume、環境變數）都會保留。
-
-**互動模式啟動**
-
-```bash
-docker start -ai my-ubuntu
-```
-
-- `-a`：附加到容器的輸出
-- `-i`：保持 STDIN 開啟
-
-### 2.3 docker restart - 重啟容器
-
-```bash
-docker restart my-nginx
-```
-
-等於 stop + start。
-
-```bash
-docker restart -t 5 my-nginx    # 等 5 秒後重啟
-```
-
-### 2.4 docker kill - 強制終止
-
-```bash
-docker kill my-nginx
-```
-
-直接送 SIGKILL，不等待。
-
-用於容器沒有回應、stop 沒反應的情況。
-
-**指定信號**
-
-```bash
-docker kill -s SIGHUP my-nginx
-```
-
-### 2.5 docker pause/unpause - 暫停/恢復
-
-```bash
-docker pause my-nginx
-docker unpause my-nginx
-```
-
-暫停容器內所有程序（使用 cgroups freezer）。
-
-程序狀態保留，不會丟失資料。和 stop 不同，stop 會終止程序。
 
 ---
 
 ## 三、刪除容器和映像檔（12 分鐘）
 
-### 3.1 docker rm - 刪除容器
+### 刪除容器
 
 ```bash
-docker rm my-nginx
+docker rm my-nginx             # 刪除已停止的容器
+docker rm -f my-nginx          # 強制刪除執行中容器
+docker container prune         # 清理所有已停止容器
 ```
 
-只能刪除已停止的容器。
-
-**強制刪除執行中的容器**
+### 刪除映像檔
 
 ```bash
-docker rm -f my-nginx
+docker rmi nginx:1.25          # 刪除映像檔
+docker rmi -f nginx:1.25       # 強制刪除
+docker image prune             # 清理 dangling images
+docker image prune -a          # 清理所有未使用映像檔
 ```
 
-等於先 kill 再 rm。
-
-**刪除多個容器**
+### 全面清理
 
 ```bash
-docker rm container1 container2
-```
-
-**刪除所有已停止的容器**
-
-```bash
-docker rm $(docker ps -aq -f status=exited)
-```
-
-或使用：
-
-```bash
-docker container prune
-```
-
-會詢問確認，加 `-f` 跳過確認。
-
-### 3.2 docker rmi - 刪除映像檔
-
-```bash
-docker rmi nginx:1.25
-```
-
-可以用名稱或 IMAGE ID。
-
-**刪除多個映像檔**
-
-```bash
-docker rmi nginx:1.25 nginx:1.24 ubuntu:22.04
-```
-
-**強制刪除**
-
-如果映像檔被容器使用中，需要強制刪除：
-
-```bash
-docker rmi -f nginx:1.25
-```
-
-**刪除所有未使用的映像檔**
-
-```bash
-docker image prune -a
-```
-
-**刪除 dangling images**
-
-```bash
-docker image prune
-```
-
-### 3.3 docker system prune - 全面清理
-
-```bash
-docker system prune
-```
-
-清理：
-- 已停止的容器
-- 未被使用的網路
-- Dangling images
-- Build cache
-
-加 `-a` 清理更多：
-
-```bash
-docker system prune -a
-```
-
-也會清理所有未被使用的映像檔（不只是 dangling）。
-
-**查看磁碟使用**
-
-```bash
-docker system df
-```
-
-輸出：
-
-```
-TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
-Images          15        3         5.2GB     4.1GB (79%)
-Containers      5         2         120MB     80MB (66%)
-Local Volumes   8         4         2.3GB     1.2GB (52%)
-Build Cache     0         0         0B        0B
+docker system prune            # 清理容器、網路、dangling images、cache
+docker system prune -a         # 更徹底（含未使用映像檔）
+docker system df               # 查看磁碟使用
 ```
 
 ---
 
 ## 四、docker logs - 查看日誌（10 分鐘）
 
-### 4.1 基本用法
+### 基本用法
 
 ```bash
-docker logs my-nginx
+docker logs my-nginx           # 顯示所有日誌
+docker logs -f my-nginx        # 即時追蹤（類似 tail -f）
+docker logs -t my-nginx        # 顯示時間戳
+docker logs --tail 100 my-nginx  # 最後 100 行
+docker logs --since 1h my-nginx  # 最近 1 小時
 ```
 
-顯示容器的標準輸出（stdout）和標準錯誤（stderr）。
-
-### 4.2 即時追蹤
-
-```bash
-docker logs -f my-nginx
-```
-
-類似 `tail -f`，持續顯示新的日誌。Ctrl+C 退出。
-
-### 4.3 顯示時間戳
-
-```bash
-docker logs -t my-nginx
-```
-
-每行前面加上時間：
-
-```
-2024-01-15T10:30:45.123456789Z 172.17.0.1 - - [15/Jan/2024...
-```
-
-### 4.4 限制輸出行數
-
-```bash
-docker logs --tail 100 my-nginx    # 最後 100 行
-docker logs --tail 0 -f my-nginx   # 不顯示舊的，只追蹤新的
-```
-
-### 4.5 根據時間篩選
-
-```bash
-docker logs --since 2024-01-15 my-nginx
-docker logs --since 1h my-nginx       # 最近 1 小時
-docker logs --since 30m my-nginx      # 最近 30 分鐘
-docker logs --until 2024-01-14 my-nginx
-```
-
-可以組合：
-
-```bash
-docker logs --since 1h --until 30m my-nginx
-```
-
-### 4.6 日誌的儲存位置
-
-預設，日誌存在：
-
-```
-/var/lib/docker/containers/<container-id>/<container-id>-json.log
-```
-
-這個檔案會一直增長，可能把磁碟塞爆。
-
-**設定日誌輪替**
-
-在 /etc/docker/daemon.json：
+### 日誌輪替設定
 
 ```json
+// /etc/docker/daemon.json
 {
-  "log-driver": "json-file",
   "log-opts": {
     "max-size": "10m",
     "max-file": "3"
@@ -288,224 +95,93 @@ docker logs --since 1h --until 30m my-nginx
 }
 ```
 
-每個日誌檔最大 10MB，最多保留 3 個檔案。
-
-或在 docker run 時指定：
-
-```bash
-docker run -d --log-opt max-size=10m --log-opt max-file=3 nginx
-```
-
 ---
 
 ## 五、docker exec - 進入容器（10 分鐘）
 
-### 5.1 基本用法
+### 基本用法
 
 ```bash
-docker exec -it my-nginx bash
+docker exec -it my-nginx bash      # 進入 shell
+docker exec -it my-nginx /bin/sh   # Alpine 用 sh
+docker exec my-nginx ls /etc/nginx # 執行單一命令
 ```
 
-在執行中的容器內執行命令。
-
-`-it` 是互動模式，通常用來開 shell。
-
-### 5.2 執行單一命令
+### 進階選項
 
 ```bash
-docker exec my-nginx ls /etc/nginx
-docker exec my-nginx cat /etc/nginx/nginx.conf
-docker exec my-nginx nginx -v
+docker exec -u root my-nginx whoami       # 指定使用者
+docker exec -e MY_VAR=hello my-nginx env  # 設定環境變數
+docker exec -w /etc/nginx my-nginx ls     # 指定工作目錄
 ```
 
-不需要 `-it`，執行完就回來。
-
-### 5.3 以不同使用者執行
-
-```bash
-docker exec -u root my-nginx whoami
-docker exec -u 1000 my-nginx whoami
-docker exec -u www-data my-nginx whoami
-```
-
-### 5.4 設定環境變數
-
-```bash
-docker exec -e MY_VAR=hello my-nginx env
-```
-
-### 5.5 指定工作目錄
-
-```bash
-docker exec -w /etc/nginx my-nginx ls
-```
-
-### 5.6 常用場景
-
-**檢查設定檔**
-
-```bash
-docker exec my-nginx cat /etc/nginx/nginx.conf
-```
-
-**查看程序**
-
-```bash
-docker exec my-nginx ps aux
-```
-
-**測試網路連線**
-
-```bash
-docker exec my-nginx curl localhost
-docker exec my-nginx ping google.com
-```
-
-**進入 shell 除錯**
-
-```bash
-docker exec -it my-nginx /bin/sh
-# 或
-docker exec -it my-nginx bash
-```
-
-有些映像檔沒有 bash（如 Alpine），用 sh。
-
-### 5.7 exec vs attach
-
-`docker attach` 也能連到容器，但不同：
+### exec vs attach
 
 | | docker exec | docker attach |
 |--|-------------|---------------|
-| 作用 | 在容器內開新程序 | 連到容器的主程序 |
-| 離開 | exit 只結束這個 shell | exit 可能停止整個容器 |
+| 作用 | 開新程序 | 連到主程序 |
+| 離開 | 只結束 shell | 可能停止容器 |
 | 適用 | 除錯、檢查 | 查看主程序輸出 |
-
-通常用 exec，很少用 attach。
 
 ---
 
 ## 六、docker cp - 複製檔案（8 分鐘）
 
-### 6.1 從主機複製到容器
+### 雙向複製
 
 ```bash
+# 主機 → 容器
 docker cp ./index.html my-nginx:/usr/share/nginx/html/
-```
 
-### 6.2 從容器複製到主機
-
-```bash
+# 容器 → 主機
 docker cp my-nginx:/etc/nginx/nginx.conf ./nginx.conf
 ```
 
-### 6.3 複製目錄
+### 使用場景
 
 ```bash
-docker cp ./website/ my-nginx:/usr/share/nginx/html/
-docker cp my-nginx:/var/log/nginx/ ./logs/
-```
-
-### 6.4 注意事項
-
-- 容器不需要執行中也可以 cp
-- 會覆蓋目標檔案
-- 保留檔案權限和時間戳（加 `-a`）
-
-```bash
-docker cp -a ./files my-nginx:/data/
-```
-
-### 6.5 使用場景
-
-**快速修改設定測試**
-
-```bash
-# 備份原設定
+# 快速修改設定
 docker cp my-nginx:/etc/nginx/nginx.conf ./nginx.conf.bak
-
-# 修改後放回去
+# 修改後放回
 docker cp ./nginx.conf my-nginx:/etc/nginx/nginx.conf
-
-# 重載設定
 docker exec my-nginx nginx -s reload
-```
-
-**提取日誌或資料**
-
-```bash
-docker cp my-app:/app/logs/ ./debug-logs/
 ```
 
 ---
 
 ## 七、其他常用指令（3 分鐘）
 
-### 7.1 docker inspect - 查看詳細資訊
-
 ```bash
-docker inspect my-nginx
+docker inspect my-nginx                    # 查看詳細資訊（JSON）
+docker inspect -f '{{.NetworkSettings.IPAddress}}' my-nginx  # 取得 IP
+docker stats                               # 即時監控（CPU、記憶體）
+docker top my-nginx                        # 查看容器內程序
 ```
-
-輸出 JSON 格式的完整資訊：網路、掛載、設定、狀態...
-
-**取得特定欄位**
-
-```bash
-# 取得 IP
-docker inspect -f '{{.NetworkSettings.IPAddress}}' my-nginx
-
-# 取得 Port Mapping
-docker inspect -f '{{.NetworkSettings.Ports}}' my-nginx
-```
-
-### 7.2 docker stats - 即時監控
-
-```bash
-docker stats
-```
-
-顯示所有容器的 CPU、記憶體、網路、I/O 使用率。
-
-```bash
-docker stats my-nginx    # 只看特定容器
-```
-
-### 7.3 docker top - 查看容器內程序
-
-```bash
-docker top my-nginx
-```
-
-類似在容器內執行 ps。
 
 ---
 
-## 八、本堂課小結（2 分鐘）
-
-這堂課學了管理容器的指令：
+## 八、小結（2 分鐘）
 
 | 指令 | 功能 |
 |-----|-----|
-| docker stop/start/restart | 啟停容器 |
-| docker kill | 強制終止 |
-| docker rm | 刪除容器 |
-| docker rmi | 刪除映像檔 |
-| docker logs | 查看日誌 |
-| docker exec | 進入容器執行命令 |
-| docker cp | 複製檔案 |
-| docker inspect | 查看詳細資訊 |
-| docker stats | 即時監控 |
+| stop/start/restart | 啟停容器 |
+| kill | 強制終止 |
+| rm | 刪除容器 |
+| rmi | 刪除映像檔 |
+| logs | 查看日誌 |
+| exec | 進入容器 |
+| cp | 複製檔案 |
+| inspect/stats | 查看資訊 |
 
 **清理指令**
 
-| 指令 | 清理對象 |
-|-----|---------|
-| docker container prune | 已停止的容器 |
-| docker image prune | Dangling images |
-| docker system prune | 全面清理 |
+| 指令 | 對象 |
+|-----|------|
+| container prune | 已停止容器 |
+| image prune | Dangling images |
+| system prune | 全面清理 |
 
-下一堂課：Nginx 容器實戰。
+下一堂課：容器資料管理（Volume）。
 
 ---
 
@@ -514,5 +190,6 @@ docker top my-nginx
 1. 容器生命週期狀態圖
 2. stop vs kill 比較
 3. docker logs 參數表
-4. docker exec vs docker attach 比較
+4. docker exec vs attach 比較
 5. 清理指令對照表
+
