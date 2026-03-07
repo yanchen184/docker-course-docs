@@ -6,7 +6,8 @@ import remarkGfm from 'remark-gfm'
 interface Hour {
   id: string
   title: string
-  file: string
+  outlineFile: string
+  scriptFile: string
 }
 
 interface Day {
@@ -20,26 +21,26 @@ const COURSE_DATA: Day[] = [
     id: 'day2',
     title: 'Day 2：Docker 基礎',
     hours: [
-      { id: 'day2-hour1', title: '第一小時：容器技術概論', file: 'day2-hour1.md' },
-      { id: 'day2-hour2', title: '第二小時：Docker 架構與核心概念', file: 'day2-hour2.md' },
-      { id: 'day2-hour3', title: '第三小時：Docker 安裝與環境設置', file: 'day2-hour3.md' },
-      { id: 'day2-hour4', title: '第四小時：Docker 基本指令', file: 'day2-hour4.md' },
-      { id: 'day2-hour5', title: '第五小時：映像檔管理', file: 'day2-hour5.md' },
-      { id: 'day2-hour6', title: '第六小時：容器資料管理', file: 'day2-hour6.md' },
-      { id: 'day2-hour7', title: '第七小時：Docker 網路', file: 'day2-hour7.md' },
+      { id: 'day2-hour1', title: '第一小時：容器技術概論', outlineFile: 'day2-hour1-outline.md', scriptFile: 'day2-hour1-script.md' },
+      { id: 'day2-hour2', title: '第二小時：Docker 架構與核心概念', outlineFile: 'day2-hour2-outline.md', scriptFile: 'day2-hour2-script.md' },
+      { id: 'day2-hour3', title: '第三小時：Docker 安裝與環境設置', outlineFile: 'day2-hour3-outline.md', scriptFile: 'day2-hour3-script.md' },
+      { id: 'day2-hour4', title: '第四小時：Docker 基本指令', outlineFile: 'day2-hour4-outline.md', scriptFile: 'day2-hour4-script.md' },
+      { id: 'day2-hour5', title: '第五小時：映像檔管理', outlineFile: 'day2-hour5-outline.md', scriptFile: 'day2-hour5-script.md' },
+      { id: 'day2-hour6', title: '第六小時：容器資料管理', outlineFile: 'day2-hour6-outline.md', scriptFile: 'day2-hour6-script.md' },
+      { id: 'day2-hour7', title: '第七小時：Docker 網路', outlineFile: 'day2-hour7-outline.md', scriptFile: 'day2-hour7-script.md' },
     ]
   },
   {
     id: 'day3',
     title: 'Day 3：Docker 進階',
     hours: [
-      { id: 'day3-hour8', title: '第八小時：Dockerfile 基礎', file: 'day3-hour8.md' },
-      { id: 'day3-hour9', title: '第九小時：Dockerfile 進階', file: 'day3-hour9.md' },
-      { id: 'day3-hour10', title: '第十小時：Docker Compose 基礎', file: 'day3-hour10.md' },
-      { id: 'day3-hour11', title: '第十一小時：Docker Compose 進階', file: 'day3-hour11.md' },
-      { id: 'day3-hour12', title: '第十二小時：映像檔最佳化', file: 'day3-hour12.md' },
-      { id: 'day3-hour13', title: '第十三小時：Docker 安全性', file: 'day3-hour13.md' },
-      { id: 'day3-hour14', title: '第十四小時：實戰演練與總結', file: 'day3-hour14.md' },
+      { id: 'day3-hour8', title: '第八小時：Dockerfile 基礎', outlineFile: 'day3-hour8-outline.md', scriptFile: 'day3-hour8-script.md' },
+      { id: 'day3-hour9', title: '第九小時：Dockerfile 進階', outlineFile: 'day3-hour9-outline.md', scriptFile: 'day3-hour9-script.md' },
+      { id: 'day3-hour10', title: '第十小時：Docker Compose 基礎', outlineFile: 'day3-hour10-outline.md', scriptFile: 'day3-hour10-script.md' },
+      { id: 'day3-hour11', title: '第十一小時：Docker Compose 進階', outlineFile: 'day3-hour11-outline.md', scriptFile: 'day3-hour11-script.md' },
+      { id: 'day3-hour12', title: '第十二小時：映像檔最佳化', outlineFile: 'day3-hour12-outline.md', scriptFile: 'day3-hour12-script.md' },
+      { id: 'day3-hour13', title: '第十三小時：Docker 安全性', outlineFile: 'day3-hour13-outline.md', scriptFile: 'day3-hour13-script.md' },
+      { id: 'day3-hour14', title: '第十四小時：實戰演練與總結', outlineFile: 'day3-hour14-outline.md', scriptFile: 'day3-hour14-script.md' },
     ]
   }
 ]
@@ -86,9 +87,18 @@ function HeadingRenderer({ level, children }: { level: number; children: React.R
   return <h5 id={id}>{children}</h5>
 }
 
+// Markdown components config
+const markdownComponents = {
+  h1: ({ children }: { children?: React.ReactNode }) => <HeadingRenderer level={1}>{children}</HeadingRenderer>,
+  h2: ({ children }: { children?: React.ReactNode }) => <HeadingRenderer level={2}>{children}</HeadingRenderer>,
+  h3: ({ children }: { children?: React.ReactNode }) => <HeadingRenderer level={3}>{children}</HeadingRenderer>,
+  h4: ({ children }: { children?: React.ReactNode }) => <HeadingRenderer level={4}>{children}</HeadingRenderer>,
+}
+
 function App() {
   const [selectedHour, setSelectedHour] = useState<string>('day2-hour1')
-  const [content, setContent] = useState<string>('')
+  const [outlineContent, setOutlineContent] = useState<string>('')
+  const [scriptContent, setScriptContent] = useState<string>('')
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set(['day2']))
   const [expandedHours, setExpandedHours] = useState<Set<string>>(new Set(['day2-hour1']))
 
@@ -96,15 +106,22 @@ function App() {
   useEffect(() => {
     const hour = COURSE_DATA.flatMap(d => d.hours).find(h => h.id === selectedHour)
     if (hour) {
-      fetch(`/docs/${hour.file}`)
-        .then(res => res.text())
-        .then(text => setContent(text))
-        .catch(err => setContent(`# Error loading content\n\n${err.message}`))
+      // Load outline
+      fetch(`${import.meta.env.BASE_URL}docs/${hour.outlineFile}`)
+        .then(res => res.ok ? res.text() : Promise.reject('File not found'))
+        .then(text => setOutlineContent(text))
+        .catch(() => setOutlineContent('# 大綱尚未建立\n\n請建立檔案：`' + hour.outlineFile + '`'))
+
+      // Load script
+      fetch(`${import.meta.env.BASE_URL}docs/${hour.scriptFile}`)
+        .then(res => res.ok ? res.text() : Promise.reject('File not found'))
+        .then(text => setScriptContent(text))
+        .catch(() => setScriptContent('# 逐字稿尚未建立\n\n請建立檔案：`' + hour.scriptFile + '`'))
     }
   }, [selectedHour])
 
-  // Extract sections from current content
-  const sections = useMemo(() => extractSections(content), [content])
+  // Extract sections from outline content
+  const sections = useMemo(() => extractSections(outlineContent), [outlineContent])
 
   // Toggle day expansion
   const toggleDay = (dayId: string) => {
@@ -132,11 +149,11 @@ function App() {
     })
   }
 
-  // Scroll to section
+  // Scroll to section in outline panel
   const scrollToSection = (sectionId: string) => {
-    const element = document.getElementById(sectionId)
+    const element = document.getElementById('outline-' + sectionId)
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
 
@@ -146,24 +163,27 @@ function App() {
     setExpandedHours(prev => new Set([...prev, hourId]))
   }
 
+  // Get current hour title
+  const currentHour = COURSE_DATA.flatMap(d => d.hours).find(h => h.id === selectedHour)
+
   return (
     <div className="flex min-h-screen bg-slate-900">
-      {/* Sidebar */}
-      <nav className="w-80 bg-slate-800 border-r border-slate-700 overflow-y-auto fixed h-full">
+      {/* Sidebar Navigation */}
+      <nav className="w-72 bg-slate-800 border-r border-slate-700 overflow-y-auto fixed h-full flex-shrink-0">
         <div className="p-4">
-          <h1 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-            <span className="text-2xl">🐳</span>
+          <h1 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+            <span className="text-xl">🐳</span>
             Docker 課程講稿
           </h1>
 
           {COURSE_DATA.map(day => (
-            <div key={day.id} className="mb-4">
+            <div key={day.id} className="mb-3">
               {/* Day Title */}
               <button
                 onClick={() => toggleDay(day.id)}
-                className="w-full flex items-center gap-2 text-left text-lg font-semibold text-blue-400 hover:text-blue-300 py-2"
+                className="w-full flex items-center gap-2 text-left text-base font-semibold text-blue-400 hover:text-blue-300 py-1.5"
               >
-                <span className={`transition-transform ${expandedDays.has(day.id) ? 'rotate-90' : ''}`}>
+                <span className={`transition-transform text-sm ${expandedDays.has(day.id) ? 'rotate-90' : ''}`}>
                   ▶
                 </span>
                 {day.title}
@@ -171,9 +191,9 @@ function App() {
 
               {/* Hours */}
               {expandedDays.has(day.id) && (
-                <div className="ml-4">
+                <div className="ml-3">
                   {day.hours.map(hour => (
-                    <div key={hour.id} className="mb-2">
+                    <div key={hour.id} className="mb-1">
                       {/* Hour Title */}
                       <div className="flex items-center">
                         <button
@@ -198,12 +218,12 @@ function App() {
 
                       {/* Sections */}
                       {expandedHours.has(hour.id) && selectedHour === hour.id && sections.length > 0 && (
-                        <div className="ml-4 mt-1 border-l border-slate-600 pl-3">
+                        <div className="ml-4 mt-1 border-l border-slate-600 pl-2">
                           {sections.map(section => (
                             <button
                               key={section.id}
                               onClick={() => scrollToSection(section.id)}
-                              className={`block text-left py-1 text-xs w-full truncate ${
+                              className={`block text-left py-0.5 text-xs w-full truncate ${
                                 section.level === 2
                                   ? 'text-slate-400 hover:text-white font-medium'
                                   : 'text-slate-500 hover:text-slate-300 ml-2'
@@ -224,22 +244,57 @@ function App() {
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main className="ml-80 flex-1 p-8 max-w-4xl">
-        <article className="markdown-body">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: ({ children }) => <HeadingRenderer level={1}>{children}</HeadingRenderer>,
-              h2: ({ children }) => <HeadingRenderer level={2}>{children}</HeadingRenderer>,
-              h3: ({ children }) => <HeadingRenderer level={3}>{children}</HeadingRenderer>,
-              h4: ({ children }) => <HeadingRenderer level={4}>{children}</HeadingRenderer>,
-            }}
-          >
-            {content}
-          </ReactMarkdown>
-        </article>
-      </main>
+      {/* Main Content Area - Two Columns */}
+      <div className="ml-72 flex-1 flex">
+        {/* Outline Panel (Left) */}
+        <main className="w-1/2 h-screen overflow-y-auto border-r border-slate-700 p-6">
+          <div className="mb-4 pb-3 border-b border-slate-700">
+            <span className="text-xs font-medium text-blue-400 uppercase tracking-wider">大綱</span>
+            <h2 className="text-lg font-bold text-white mt-1">{currentHour?.title}</h2>
+          </div>
+          <article className="markdown-body">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                ...markdownComponents,
+                h1: ({ children }) => {
+                  const text = String(children)
+                  const id = 'outline-' + text.toLowerCase().replace(/[^\w\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '')
+                  return <h1 id={id}>{children}</h1>
+                },
+                h2: ({ children }) => {
+                  const text = String(children)
+                  const id = 'outline-' + text.toLowerCase().replace(/[^\w\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '')
+                  return <h2 id={id}>{children}</h2>
+                },
+                h3: ({ children }) => {
+                  const text = String(children)
+                  const id = 'outline-' + text.toLowerCase().replace(/[^\w\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '')
+                  return <h3 id={id}>{children}</h3>
+                },
+              }}
+            >
+              {outlineContent}
+            </ReactMarkdown>
+          </article>
+        </main>
+
+        {/* Script Panel (Right) */}
+        <aside className="w-1/2 h-screen overflow-y-auto p-6 bg-slate-950">
+          <div className="mb-4 pb-3 border-b border-slate-700">
+            <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">逐字稿</span>
+            <h2 className="text-lg font-bold text-white mt-1">{currentHour?.title}</h2>
+          </div>
+          <article className="markdown-body">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
+              {scriptContent}
+            </ReactMarkdown>
+          </article>
+        </aside>
+      </div>
     </div>
   )
 }
