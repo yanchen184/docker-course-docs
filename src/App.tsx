@@ -123,6 +123,29 @@ function App() {
   // Extract sections from outline content
   const sections = useMemo(() => extractSections(outlineContent), [outlineContent])
 
+  // Calculate word count for script (Chinese characters + English words)
+  const scriptWordCount = useMemo(() => {
+    if (!scriptContent || scriptContent.includes('逐字稿尚未建立')) return 0
+    // Remove markdown syntax
+    const cleanText = scriptContent
+      .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+      .replace(/`[^`]+`/g, '') // Remove inline code
+      .replace(/#+\s/g, '') // Remove heading markers
+      .replace(/\*\*|__/g, '') // Remove bold
+      .replace(/\*|_/g, '') // Remove italic
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links, keep text
+      .replace(/[-*+]\s/g, '') // Remove list markers
+      .replace(/\|/g, '') // Remove table pipes
+      .replace(/---+/g, '') // Remove horizontal rules
+
+    // Count Chinese characters
+    const chineseChars = (cleanText.match(/[\u4e00-\u9fff]/g) || []).length
+    // Count English words
+    const englishWords = (cleanText.match(/[a-zA-Z]+/g) || []).length
+
+    return chineseChars + englishWords
+  }, [scriptContent])
+
   // Toggle day expansion
   const toggleDay = (dayId: string) => {
     setExpandedDays(prev => {
@@ -282,7 +305,14 @@ function App() {
         {/* Script Panel (Right) */}
         <aside className="w-1/2 h-screen overflow-y-auto p-6 bg-slate-950">
           <div className="mb-4 pb-3 border-b border-slate-700">
-            <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">逐字稿</span>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">逐字稿</span>
+              {scriptWordCount > 0 && (
+                <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded">
+                  {scriptWordCount.toLocaleString()} 字
+                </span>
+              )}
+            </div>
             <h2 className="text-lg font-bold text-white mt-1">{currentHour?.title}</h2>
           </div>
           <article className="markdown-body">
