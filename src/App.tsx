@@ -21,26 +21,26 @@ const COURSE_DATA: Day[] = [
     id: 'day2',
     title: 'Day 2：Docker 基礎',
     hours: [
-      { id: 'day2-hour1', title: '第一小時：容器技術概論', outlineFile: 'day2-hour1-outline.md', scriptFile: 'day2-hour1-script.md' },
-      { id: 'day2-hour2', title: '第二小時：Docker 架構與核心概念', outlineFile: 'day2-hour2-outline.md', scriptFile: 'day2-hour2-script.md' },
-      { id: 'day2-hour3', title: '第三小時：Docker 安裝與環境設置', outlineFile: 'day2-hour3-outline.md', scriptFile: 'day2-hour3-script.md' },
-      { id: 'day2-hour4', title: '第四小時：Docker 基本指令', outlineFile: 'day2-hour4-outline.md', scriptFile: 'day2-hour4-script.md' },
-      { id: 'day2-hour5', title: '第五小時：映像檔管理', outlineFile: 'day2-hour5-outline.md', scriptFile: 'day2-hour5-script.md' },
-      { id: 'day2-hour6', title: '第六小時：容器資料管理', outlineFile: 'day2-hour6-outline.md', scriptFile: 'day2-hour6-script.md' },
-      { id: 'day2-hour7', title: '第七小時：Docker 網路', outlineFile: 'day2-hour7-outline.md', scriptFile: 'day2-hour7-script.md' },
+      { id: 'day2-hour1', title: '第一小時：容器技術概論', outlineFile: 'day2-hour1.md', scriptFile: 'day2-hour1-full.md' },
+      { id: 'day2-hour2', title: '第二小時：Docker 架構與核心概念', outlineFile: 'day2-hour2.md', scriptFile: 'day2-hour2-full.md' },
+      { id: 'day2-hour3', title: '第三小時：Docker 安裝與環境設置', outlineFile: 'day2-hour3.md', scriptFile: 'day2-hour3-full.md' },
+      { id: 'day2-hour4', title: '第四小時：Docker 基本指令', outlineFile: 'day2-hour4.md', scriptFile: 'day2-hour4-full.md' },
+      { id: 'day2-hour5', title: '第五小時：映像檔管理', outlineFile: 'day2-hour5.md', scriptFile: 'day2-hour5-full.md' },
+      { id: 'day2-hour6', title: '第六小時：容器資料管理', outlineFile: 'day2-hour6.md', scriptFile: 'day2-hour6-full.md' },
+      { id: 'day2-hour7', title: '第七小時：Docker 網路', outlineFile: 'day2-hour7.md', scriptFile: 'day2-hour7-full.md' },
     ]
   },
   {
     id: 'day3',
     title: 'Day 3：Docker 進階',
     hours: [
-      { id: 'day3-hour8', title: '第八小時：Dockerfile 基礎', outlineFile: 'day3-hour8-outline.md', scriptFile: 'day3-hour8-script.md' },
-      { id: 'day3-hour9', title: '第九小時：Dockerfile 進階', outlineFile: 'day3-hour9-outline.md', scriptFile: 'day3-hour9-script.md' },
-      { id: 'day3-hour10', title: '第十小時：Docker Compose 基礎', outlineFile: 'day3-hour10-outline.md', scriptFile: 'day3-hour10-script.md' },
-      { id: 'day3-hour11', title: '第十一小時：Docker Compose 進階', outlineFile: 'day3-hour11-outline.md', scriptFile: 'day3-hour11-script.md' },
-      { id: 'day3-hour12', title: '第十二小時：映像檔最佳化', outlineFile: 'day3-hour12-outline.md', scriptFile: 'day3-hour12-script.md' },
-      { id: 'day3-hour13', title: '第十三小時：Docker 安全性', outlineFile: 'day3-hour13-outline.md', scriptFile: 'day3-hour13-script.md' },
-      { id: 'day3-hour14', title: '第十四小時：實戰演練與總結', outlineFile: 'day3-hour14-outline.md', scriptFile: 'day3-hour14-script.md' },
+      { id: 'day3-hour8', title: '第八小時：Dockerfile 基礎', outlineFile: 'day3-hour8.md', scriptFile: 'day3-hour8-full.md' },
+      { id: 'day3-hour9', title: '第九小時：Dockerfile 進階', outlineFile: 'day3-hour9.md', scriptFile: 'day3-hour9-full.md' },
+      { id: 'day3-hour10', title: '第十小時：Docker Compose 基礎', outlineFile: 'day3-hour10.md', scriptFile: 'day3-hour10-full.md' },
+      { id: 'day3-hour11', title: '第十一小時：Docker Compose 進階', outlineFile: 'day3-hour11.md', scriptFile: 'day3-hour11-full.md' },
+      { id: 'day3-hour12', title: '第十二小時：映像檔最佳化', outlineFile: 'day3-hour12.md', scriptFile: 'day3-hour12-full.md' },
+      { id: 'day3-hour13', title: '第十三小時：Docker 安全性', outlineFile: 'day3-hour13.md', scriptFile: 'day3-hour13-full.md' },
+      { id: 'day3-hour14', title: '第十四小時：實戰演練與總結', outlineFile: 'day3-hour14.md', scriptFile: 'day3-hour14-full.md' },
     ]
   }
 ]
