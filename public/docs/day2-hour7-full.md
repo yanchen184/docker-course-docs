@@ -318,6 +318,26 @@ ping 8.8.8.8
 2. 防火牆擋住：檢查 iptables
 3. DNS 問題：在 daemon.json 設定 DNS
 
+**補充：Docker0 網路原理**
+
+安裝 Docker 之後，主機上會多一張虛擬網卡 `docker0`，它扮演的角色就像路由器。可以用 `ip addr` 查看：
+
+```bash
+ip addr
+# lo        — 本機迴環地址
+# eth0      — 主機的實體網卡
+# docker0   — Docker 的虛擬網橋（預設 172.17.0.1）
+```
+
+每啟動一個容器，Docker 就透過 **veth-pair** 技術建立一對虛擬網卡：一端在容器內（eth0），一端在主機上（vethXXX），成對出現、彼此相連。容器之間的通訊並非直連，而是經由 docker0 轉發——docker0 就是所有容器共用的路由器。
+
+```bash
+# 查看容器內部的網路地址
+docker exec -it my-container ip addr
+```
+
+容器刪除時，對應的 veth-pair 也會跟著消失。子網掩碼 `/16` 代表大約可分配 65535 個 IP；`/24` 則只有 255 個。
+
 ### 3.6 Permission Denied
 
 **症狀**：掛載的 Volume 內檔案無法存取
@@ -424,7 +444,78 @@ Container
 
 ---
 
-## 五、預告 Day 3（3 分鐘）
+## 五、Docker 網路先導（5 分鐘）
+
+在進入 Day 3 之前，先帶大家認識 Docker 網路的幾個重要概念。理解網路是後面學容器編排、集群部署的基礎。
+
+### 5.1 容器互聯：--link（已不建議）
+
+預設情況下，容器之間透過 IP 可以互 ping，但無法透過容器名稱互連。Docker 早期提供 `--link` 解決這個問題：
+
+```bash
+docker run -d -P --name tomcat03 --link tomcat02 tomcat
+
+# tomcat03 可以 ping 通 tomcat02
+docker exec -it tomcat03 ping tomcat02
+```
+
+`--link` 的原理很簡單——它在容器的 `/etc/hosts` 裡寫死了目標容器的 IP 映射：
+
+```bash
+docker exec -it tomcat03 cat /etc/hosts
+# 會看到 tomcat02 對應的 IP
+```
+
+但 `--link` 是單向的（03 能連 02，02 不能連 03），而且維護麻煩。**真實開發中已不建議使用**，應該改用自定義網路。
+
+### 5.2 自定義網路（推薦）
+
+Docker 有幾種網路模式：
+
+| 模式 | 說明 |
+|-----|------|
+| bridge | 橋接模式（預設），容器透過虛擬網橋通訊 |
+| host | 主機模式，與宿主機共享網路 |
+| none | 不配置網路 |
+| container | 與其他容器共享網路命名空間 |
+
+建立自定義網路：
+
+```bash
+docker network create -d bridge --subnet 192.168.0.0/16 --gateway 192.168.0.1 mynet
+docker network ls
+docker network inspect mynet
+```
+
+使用自定義網路啟動容器：
+
+```bash
+docker run -d -P --name tomcat-net-01 --net mynet tomcat
+docker run -d -P --name tomcat-net-02 --net mynet tomcat
+
+# 不用 --link，直接通過容器名就能 ping 通
+docker exec -it tomcat-net-01 ping tomcat-net-02
+```
+
+自定義網路會自動維護容器名稱到 IP 的 DNS 解析，這是 docker0 做不到的。實務上，不同服務群組應建立各自的網路（例如 Redis 集群一個網路、MySQL 集群一個網路），達到網路隔離。
+
+### 5.3 跨網路連通：docker network connect
+
+不同網路的容器預設無法互通（網段不同）。若需要跨網路連線，使用 `docker network connect`：
+
+```bash
+# 把 docker0 上的 tomcat01 連進 mynet
+docker network connect mynet tomcat01
+
+# 現在 tomcat01 可以 ping 通 mynet 上的容器了
+docker exec -it tomcat01 ping tomcat-net-01
+```
+
+原理是讓容器同時擁有兩個網段的 IP（類似一台伺服器同時有公網 IP 和私網 IP）。
+
+---
+
+## 六、預告 Day 3（3 分鐘）
 
 下週我們繼續深入：
 
@@ -444,7 +535,7 @@ Container
 
 ---
 
-## 六、本堂課小結（3 分鐘）
+## 七、本堂課小結（3 分鐘）
 
 這堂課做了：
 
@@ -460,7 +551,12 @@ Container
    - 拉取失敗 → 檢查名稱、登入、網路
    - 磁碟滿 → docker system prune
 
-3. **Day 2 總複習**
+3. **Docker 網路先導**
+   - Docker0 與 veth-pair 原理
+   - --link（已不建議）vs 自定義網路
+   - docker network connect 跨網路連通
+
+4. **Day 2 總複習**
    - 核心概念
    - 重要指令
    - 常用參數
@@ -491,186 +587,3 @@ docker run -d \
 3. Docker 工作流程圖
 4. Day 2 知識點心智圖
 
----
-
-## 📺 補充教材：狂神說 Docker
-
-> 以下內容來自【狂神說Java】Docker 教程系列，作為本節的補充參考資料。
-
-### P34：Docker0 網路詳解
-
-<sub>[00:00-02:03]</sub>
-OK，那我們來休息了一會兒繼續講，我們來把這個 Docker 網路今天給他錄完。錄完了之後的話，剩下的話這就是企業真正實戰用的了，比如說容器編排、集群部署、流水線。你要理解了 Docker 網路，才能去學下面的所有東西，否則你根本看不懂這裡面是怎麼跑的。
-
-<sub>[02:03-04:07]</sub>
-首先我們第一個理解，就是理解我們的網路。大家肯定都學過一個科目叫做計算機網路原理，我們這個地方的理解網路，主要是理解 Docker 的網路。而 Docker 裡面的網路核心就有一個 Docker0，所以我們來理解 Docker0。首先我們把所有東西先清空一下，`docker rm -f $(docker ps -aq)`，把所有的容器先全部移了，然後我們再把鏡像也都移除，就是我們什麼都不要了，乾乾淨淨的來學網路。
-
-<sub>[04:07-06:01]</sub>
-在 Linux 裡面獲取當前 IP 地址的命令叫 `ip addr`，大家可以看到我們當前有三個網卡。第一個 `lo` 是我們本機迴環地址；`eth0` 就是我們的阿里雲內網地址；Docker0 就是 Docker 幫我們生成的一個網卡，就是一個路由器。OK 那現在的話，我們通過 `ip addr` 看到了這三個網卡，分別代表了三種不同的環境。
-
-<sub>[06:01-08:09]</sub>
-那我們就要思考一個問題，Docker 是如何處理容器的網路訪問的？比如說我現在有一個 Tomcat，那這 Tomcat 裡面跑了一個 Web 項目，它要去訪問 MySQL，那這個怎麼連接呢？應該寫 127.0.0.1 嗎？還是寫阿里雲內網地址？或者是寫 Docker 的地址？那我們研究 Docker 網路就是來研究這一塊的內容。
-
-我們來做一個測試，啟動一個 Tomcat 容器。查看容器的內部網路地址，在後面加一個 `ip addr` 就可以了：
-
-```bash
-docker exec -it tomcat01 ip addr
-```
-
-<sub>[08:09-11:00]</sub>
-你會發現容器啟動的時候會得到一個 eth0 這種 IP 地址，這個就是 Docker 給它分配的。每一個容器都會有這麼一個地址。那我們來測試一下，Linux 服務器能不能 ping 通容器內部？我告訴你，肯定可以。我是一個服務器，我自己生產的東西，難道我 ping 不通嗎？所以結論就是，Linux 可以 ping 通 Docker 容器內部。
-
-<sub>[11:00-13:00]</sub>
-那現在我們知道 Docker 會給容器分配一個網卡，這個網卡非常有意思。Docker0 是 172.18.0.1，這個 0.1 什麼意思？你們經常在家裡訪問 WiFi，比如說 192.168.0.1，這個就是你們路由器的地址。每啟動一個 Docker 容器，Docker 就會給容器分配一個 IP，而且只要安裝了 Docker 就會有一個網卡叫 Docker0，它是橋接模式，使用的技術是 veth-pair 技術。
-
-<sub>[13:00-16:00]</sub>
-什麼是 veth-pair 呢？我們發現這些容器帶來的網卡都是一對一對的。veth-pair 是 Linux 下的虛擬設備接口，它們都是成對出現的。一端連著協議，一端彼此相連，這樣就可以通信。只要通過 veth-pair 連接的就可以進行通信了。Docker 容器之間的連接都是使用的 veth-pair 技術，這網卡都是成對出現的。
-
-<sub>[16:00-20:00]</sub>
-我們啟動了兩個項目，如果它能互相 ping 通就是最好的。現在 Tomcat01 和 Tomcat02 是共用的一個路由器，也就是 Docker0。所有的容器不指定網路的情況下都是 Docker0 路由的，Docker 會給容器分配一個默認的可用 IP。
-
-網卡序號是一對一對往上加的，261-262，然後 263-264。比如說 Tomcat01 要去請求 Tomcat02，它並不是直連的，它要通過 veth-pair 技術發送到 Docker0，Docker0 就是個路由器，所有請求都要經過路由器來轉發。
-
-<sub>[20:00-24:00]</sub>
-結論就是：Docker 使用的是 Linux 的橋接，所有東西是一個橋接過來的網卡。容器內和 Docker0 各自創建了一個虛拟網卡，通過 veth-pair 來進行連接。Docker 中的所有網路接口都是虛擬的，虛擬的轉發效率高。
-
-那子網掩碼 /16 代表什麼呢？代表後面有兩位可以變化，能存放的 IP 大約是 255×255 ≈ 65535 個。如果是 /24，代表只有最後面的 255 個在這個網路範圍內。
-
-<sub>[24:00-30:15]</sub>
-容器刪除的時候，對應的網橋（也就是 veth-pair 這一對）就沒了。這就是 Docker 的核心網路機制。
-
-那思考一個場景：我們編寫了一個微服務，要去連接 database URL，每一次啟動 MySQL 用 Docker 去啟動，它就會分配一個新的 IP，這個 IP 就會變。那能不能通過名字來訪問服務？如果能做到這一點，我們就能實現高可用了。Docker 裡面給我們提供了一個 `--link` 的方式來解決，接下來我們就來看看。
-
----
-
-### P35：容器互聯 --link
-
-<sub>[00:00-02:04]</sub>
-剛才提出了一個設想，我們現在就來解決。Docker 提供了一個 `--link` 來幫我們解決容器之間不用通過 IP 地址直接互通的問題。我們啟動一個 Tomcat01，再啟動一個 Tomcat02，然後嘗試通過服務名去 ping。
-
-```bash
-docker exec -it tomcat02 ping tomcat01
-```
-
-你會發現 ping 不通！但是我們可以解決這個問題。
-
-<sub>[02:04-03:06]</sub>
-我們再啟動一個 Tomcat03，在啟動的時候加上 `--link` 參數，把 03 跟 02 連接起來：
-
-```bash
-docker run -d -P --name tomcat03 --link tomcat02 tomcat
-```
-
-現在我們用 Tomcat03 來 ping 02，回車，是不是 ping 通了！完全沒有任何問題。通過 `--link` 就可以解決這個問題，我們就可以通過服務名來 ping，以後傳東西可以寫服務名了，不用寫 IP 了。
-
-<sub>[03:06-05:00]</sub>
-但是反向能 ping 通嗎？我用 02 ping 03，肯定是不行的，因為沒有配置。如果你想讓 02 連 03，你要在 02 裡面也配一下 03。
-
-我們可以用 `docker network` 命令來查看網路資訊。`docker network ls` 可以看到有個默認的 bridge，這個 bridge 就是 Docker0。用 `docker network inspect bridge` 可以查看網卡裡面的所有東西。
-
-<sub>[05:00-09:00]</sub>
-在 inspect 的結果裡面可以看到預設的網關是 0.1，也就是 Docker0。下面還有三個容器，每個容器不指定 IP 的時候，Docker 會隨機分配一個 IP。
-
-那 `--link` 的原理到底是什麼呢？我們進入 Tomcat03 的容器，查看 `/etc/hosts` 文件：
-
-```bash
-docker exec -it tomcat03 cat /etc/hosts
-```
-
-驚喜的發現，在 Tomcat03 的 hosts 配置文件裡面直接把 Tomcat02 寫死在這了！就是只要請求 Tomcat02，它直接轉發到對應的 IP。所以 `--link` 的本質就是在 hosts 配置中增加了一個映射。
-
-<sub>[09:00-12:03]</sub>
-但是真實開發中已經不建議使用 `--link` 了，因為這種方式太笨了。我們需要更高級的網路——自定義網路。Docker0 是一個官方的網橋，它的功能是有限的，比如 Docker0 不支持通過容器名進行連接訪問。我們自己去定義一個 Docker 網路，讓它支持容器名訪問就可以了。自定義網路才是高手的玩法，而 `--link` 就是給新手用的。
-
----
-
-### P36：自定義網路
-
-<sub>[00:00-02:36]</sub>
-我們來看一下自定義網路怎麼做。這些技術都叫容器互聯，通過 `--link` 可以互聯，通過自定義網路也能互聯。用 `docker network ls` 查看所有的 Docker 網路。
-
-Docker 裡面有幾種網路模式：
-- **bridge**：橋接模式，就是在 Docker 上面搭橋，所有請求都通過這個橋來轉發
-- **none**：不配置網路，一般不用
-- **host**：主機模式，和宿主機共享網路
-- **container**：容器內網路聯通，局限性很大，用的少
-
-我們自己創建的網路也使用 bridge 橋接模式。
-
-<sub>[02:36-07:00]</sub>
-`docker network create --help` 可以看到創建方式。`-d` 就是 driver，默認是 bridge。`--subnet` 是子網，`--gateway` 是網關。我們來自己創建一個：
-
-```bash
-docker network create -d bridge --subnet 192.168.0.0/16 --gateway 192.168.0.1 mynet
-```
-
-這個 `/16` 代表它可以創建 65535 個子網。gateway 192.168.0.1 就是你們家 WiFi 的原理，就是網關。用 `docker network ls` 可以看到我們剛才創建的 bridge 網路了。用 `docker network inspect mynet` 可以看到我們配的 subnet 以及 gateway。
-
-<sub>[07:00-10:00]</sub>
-之前啟動容器默認有個參數 `--net bridge`，走的就是 Docker0。現在我們可以改這個網路，甚至自定義網路。Docker0 的特點：它是默認的，但域名是不能訪問的，`--link` 可以打通連接但比較麻煩。
-
-我們現在啟動兩個容器，使用自定義網路：
-
-```bash
-docker run -d -P --name tomcat-net-01 --net mynet tomcat
-docker run -d -P --name tomcat-net-02 --net mynet tomcat
-```
-
-用 `docker network inspect mynet` 可以看到兩個容器分配的 IP 是 192.168.0.2 和 192.168.0.3。
-
-<sub>[10:00-13:01]</sub>
-現在我們來測試自定義網路的好處：
-
-```bash
-# ping IP 能通
-docker exec -it tomcat-net-01 ping 192.168.0.3
-
-# 不用 --link，直接通過名字 ping 也能通！
-docker exec -it tomcat-net-01 ping tomcat-net-02
-```
-
-也是能夠 ping 通的！這說明自定義的網路修復了 Docker0 的缺點，全部都支持了。不使用 `--link`，也可以 ping 通容器名字。
-
-結論：我們自定義的網路 Docker 都已經幫我們維護好了對應的關係，而 Docker0 是沒有這個功能的，所以推薦平時這樣使用網路。
-
-好處：以後比如說有一堆集群，Redis 是一個集群搭建一個 Redis 的網路，MySQL 是一個集群搭建一個 MySQL 的網路，網路之間是互相隔離的，各有自己的子網，保證集群安全和健康。不同的集群使用不同的網路。
-
----
-
-### P37：網路連通
-
-<sub>[00:00-03:08]</sub>
-我們來看一下網路聯通的問題。畫一下當前的模型圖：我們現在有兩個網路，第一個是 Docker0，第二個是我們自己創建的 mynet。mynet 上有 tomcat-net-01 和 tomcat-net-02，Docker0 上也有 tomcat01 和 tomcat02。
-
-Docker0 預設的網段是 172.18.0.x，mynet 的網段是 192.168.0.x，網段不通，是不可能 ping 通的。網路最核心的就是網段。
-
-```bash
-# 這個是不可能的
-docker exec -it tomcat01 ping tomcat-net-01
-```
-
-直接連是不可能的。這個時候我們需要讓容器連接到 mynet 網路，注意是容器跟網路打通，不是網卡跟網卡打通。
-
-<sub>[03:08-05:00]</sub>
-`docker network --help` 裡面有個命令叫 `connect`——連接一個容器到一個網路，這就是網路聯通的核心。
-
-```bash
-docker network connect mynet tomcat01
-```
-
-聯通之後，`docker network inspect mynet` 會發現它的操作是把 tomcat01 直接加到 mynet 網路裡面來了！這在官方叫做一個容器兩個 IP 地址，就好比阿里雲服務器有公網 IP 和私網 IP。它的打通方式就是這麼暴力——直接給容器再分配一個新網段的 IP。
-
-<sub>[05:00-08:13]</sub>
-我們來測試一下現在能不能 ping 通：
-
-```bash
-# tomcat01 已經聯通，可以 ping 通
-docker exec -it tomcat01 ping tomcat-net-01
-# 大功告成！
-
-# 但是 tomcat02 沒有聯通，依舊打不通
-docker exec -it tomcat02 ping tomcat-net-01
-# 要讓 02 也聯通的話，再 connect 就可以了
-```
-
-結論：假設要跨網路操作別人，就需要使用 `docker network connect` 來進行聯通。關於 Docker 網路的東西其實就這麼多並不難，接下來我們會來一個實戰，部署一個 Redis 集群。
