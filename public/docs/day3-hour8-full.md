@@ -463,3 +463,15 @@ docker save -o backup/my-app-v1.tar my-app:v1
 3. Tag 指向 Image ID 關係圖
 4. 不同 Base Image 大小比較表
 5. docker history 輸出解析
+
+---
+
+## 📺 補充教材：狂神說 Docker
+
+> 以下內容來自【狂神說Java】Docker 教程系列，作為本節的補充參考資料。
+
+### 鏡像原理相關
+
+關於聯合文件系統和鏡像分層的詳細講解，請參考第二小時的補充教材：
+- **P18：鏡像原理之聯合文件系統**
+- **P19：鏡像原理之分層理解**
