@@ -245,16 +245,16 @@ registry.example.com/nginx      v1       a6bd71f48f68   43.2MB   # 同一個 ID
 
 ### 4.4 latest 的陷阱
 
-**latest 不代表最新版本。**
+**latest 不是穩定版本號。**
 
-latest 只是一個名字叫 latest 的 tag，不會自動更新。
+latest 只是一個可變的 tag 名稱，不代表「最新版」，也不保證不同時間拉到的是同一份映像檔。
 
 ```bash
 # 今天
 docker pull nginx:latest  # 拉到 1.25.3
 
 # 一個月後
-docker pull nginx:latest  # 可能還是本機的 1.25.3，不會自動變成 1.26
+docker pull nginx:latest  # 可能拉到不同內容的 latest，無法保證可重現
 ```
 
 **生產環境永遠不要用 latest：**
@@ -463,4 +463,3 @@ docker save -o backup/my-app-v1.tar my-app:v1
 3. Tag 指向 Image ID 關係圖
 4. 不同 Base Image 大小比較表
 5. docker history 輸出解析
-

@@ -1,5 +1,9 @@
 # Day 2 第一小時：環境一致性問題與容器技術
 
+> Archived reference file.
+> This file is not rendered by the app.
+> Active course content is mapped through `src/App.tsx` and the `dayX-hourY(.md/-full.md)` files.
+
 ## 一、開場（2 分鐘）
 
 今天開始講容器技術。

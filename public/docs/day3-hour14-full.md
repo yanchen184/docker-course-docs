@@ -203,7 +203,7 @@ __tests__
 *.test.ts
 *.spec.ts
 Dockerfile
-docker-compose.yml
+compose.yaml
 ```
 
 ### 3.3 完整 Dockerfile
@@ -554,7 +554,7 @@ docker run -d -p 8080:8080 --name spring-app my-spring-app
 
 ## 七、實戰：Docker 搭建 Redis 叢集（5 分鐘）
 
-學了 Docker 網路和容器編排之後，可以快速搭建一個 Redis 叢集來體驗 Docker 的威力。
+如果想把前面學到的 Docker 網路、容器啟動與設定管理串起來，可以快速搭建一個 Redis 叢集來體驗多節點服務的概念。
 
 ### 7.1 建立叢集網路
 
@@ -787,7 +787,7 @@ Docker 的概念在 Kubernetes 裡的對應：
 |--------|------------|
 | Container | Pod |
 | docker run | kubectl create |
-| docker-compose | Deployment + Service |
+| docker compose | Deployment + Service |
 | 手動擴展 | ReplicaSet 自動擴展 |
 | 手動健康檢查 | Liveness/Readiness Probe |
 
@@ -861,4 +861,3 @@ Kubernetes 是 Docker 的延伸，不是替代。
 5. 兩天課程內容總覽表
 6. Docker 到 Kubernetes 對應表
 7. Redis 叢集架構圖（3 主 3 從）
-

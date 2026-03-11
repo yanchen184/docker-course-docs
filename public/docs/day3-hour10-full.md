@@ -104,7 +104,7 @@ docker network inspect bridge
 
 ```bash
 # 方法一
-docker inspect -f '{{.NetworkSettings.IPAddress}}' my-nginx
+docker inspect -f '{{(index .NetworkSettings.Networks "bridge").IPAddress}}' my-nginx
 
 # 方法二：進入容器
 docker exec my-nginx ip addr
@@ -119,7 +119,7 @@ docker run -d --name web nginx:alpine
 docker run -d --name app alpine sleep 3600
 
 # 取得 web 的 IP
-docker inspect -f '{{.NetworkSettings.IPAddress}}' web
+docker inspect -f '{{(index .NetworkSettings.Networks "bridge").IPAddress}}' web
 # 假設是 172.17.0.2
 
 # 從 app 連接 web

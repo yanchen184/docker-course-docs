@@ -1,5 +1,9 @@
 # Docker 課程小測驗與休息時間
 
+> Archived reference file.
+> This file is not rendered by the app.
+> Active course content is mapped through `src/App.tsx` and the `dayX-hourY(.md/-full.md)` files.
+
 每堂課結束前 5-10 分鐘，可以選擇「動手操作」或「小測驗」，讓講師休息。
 
 ---

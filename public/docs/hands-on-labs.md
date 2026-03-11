@@ -1,5 +1,9 @@
 # Docker 課程動手實作指南
 
+> Archived reference file.
+> This file is not rendered by the app.
+> Active course content is mapped through `src/App.tsx` and the `dayX-hourY(.md/-full.md)` files.
+
 本文件整理每個小時的動手操作環節，確保學員有足夠的實作時間。
 
 ---

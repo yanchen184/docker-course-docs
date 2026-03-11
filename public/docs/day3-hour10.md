@@ -1,4 +1,4 @@
-# Day 3 第十小時：Docker Compose 基礎
+# Day 3 第十小時：容器網路基礎
 
 ---
 
@@ -48,7 +48,7 @@ Container B (172.17.0.3)
 ### 查看容器 IP
 
 ```bash
-docker inspect -f '{{.NetworkSettings.IPAddress}}' my-nginx
+docker inspect -f '{{(index .NetworkSettings.Networks "bridge").IPAddress}}' my-nginx
 ```
 
 ### 預設 bridge 限制
@@ -162,7 +162,7 @@ backend-network
 
 **重點**：用自訂網路 + 容器名稱通訊。
 
-下一堂：Docker Compose 進階。
+下一堂：Port Mapping 進階。
 
 ---
 
@@ -172,4 +172,3 @@ backend-network
 2. 預設 vs 自訂 bridge 比較
 3. 三種網路模式比較表
 4. 多網路架構範例
-

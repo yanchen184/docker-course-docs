@@ -1,4 +1,4 @@
-# Day 3 第九小時：Dockerfile 進階
+# Day 3 第九小時：容器生命週期管理
 
 ---
 
@@ -57,7 +57,7 @@ docker inspect -f '{{.State.Status}}' my-nginx
 docker inspect -f '{{.State.ExitCode}}' my-nginx
 
 # 網路
-docker inspect -f '{{.NetworkSettings.IPAddress}}' my-nginx
+docker inspect -f '{{(index .NetworkSettings.Networks "bridge").IPAddress}}' my-nginx
 
 # 掛載
 docker inspect -f '{{json .Mounts}}' my-nginx | jq
@@ -177,7 +177,7 @@ docker inspect -f '{{.State.Health.Status}}' web
 | 監控 | docker stats |
 | 健康 | --health-cmd |
 
-下一堂：Docker Compose 基礎。
+下一堂：容器網路基礎。
 
 ---
 
@@ -187,4 +187,3 @@ docker inspect -f '{{.State.Health.Status}}' web
 2. 資源限制參數表
 3. 重啟策略比較表
 4. docker stats 輸出範例
-

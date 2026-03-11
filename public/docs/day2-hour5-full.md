@@ -487,7 +487,7 @@ docker inspect my-nginx
 
 ```bash
 # 取得 IP
-docker inspect -f '{{.NetworkSettings.IPAddress}}' my-nginx
+docker inspect -f '{{(index .NetworkSettings.Networks "bridge").IPAddress}}' my-nginx
 
 # 取得 Port Mapping
 docker inspect -f '{{.NetworkSettings.Ports}}' my-nginx

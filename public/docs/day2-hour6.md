@@ -1,4 +1,4 @@
-# Day 2 第六小時：容器資料管理
+# Day 2 第六小時：Nginx 容器實戰
 
 ---
 
@@ -178,7 +178,7 @@ curl http://localhost/about.html
 - 掛載設定檔：自訂 Nginx 行為
 - 多容器運行在不同 port
 
-下一堂課：Docker 網路。
+下一堂課：實作練習與 Day 2 總結。
 
 ---
 
@@ -188,4 +188,3 @@ curl http://localhost/about.html
 2. Port Mapping 示意圖
 3. Volume 掛載示意圖
 4. 完整 docker run 命令解析
-

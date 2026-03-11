@@ -1,4 +1,4 @@
-# Day 3 第八小時：Dockerfile 基礎
+# Day 3 第八小時：映像檔深入理解
 
 ---
 
@@ -153,7 +153,7 @@ docker load -i nginx.tar
 | Tag | 別名，latest 不等於最新 |
 | 選擇 | 優先官方，根據需求選 base image |
 
-下一堂：Dockerfile 進階。
+下一堂：容器生命週期管理。
 
 ---
 
@@ -163,4 +163,3 @@ docker load -i nginx.tar
 2. Layer 共用示意圖
 3. Tag 指向 Image ID 關係圖
 4. Base Image 大小比較表
-

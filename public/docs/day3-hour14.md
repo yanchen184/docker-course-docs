@@ -189,7 +189,7 @@ docker run -it my-image sh        # 互動式除錯
 |--------|------------|
 | Container | Pod |
 | docker run | kubectl create |
-| docker-compose | Deployment + Service |
+| docker compose | Deployment + Service |
 | 手動擴展 | ReplicaSet 自動擴展 |
 | 手動健康檢查 | Liveness/Readiness Probe |
 
@@ -238,4 +238,3 @@ docker run -it my-image sh        # 互動式除錯
 2. 完整 Dockerfile 範例
 3. 兩天課程內容總覽表
 4. Docker 到 Kubernetes 對應表
-

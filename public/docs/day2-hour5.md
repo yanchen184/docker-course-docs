@@ -1,4 +1,4 @@
-# Day 2 第五小時：映像檔管理
+# Day 2 第五小時：Docker 基本指令（下）
 
 ---
 
@@ -153,7 +153,7 @@ docker exec my-nginx nginx -s reload
 
 ```bash
 docker inspect my-nginx                    # 查看詳細資訊（JSON）
-docker inspect -f '{{.NetworkSettings.IPAddress}}' my-nginx  # 取得 IP
+docker inspect -f '{{(index .NetworkSettings.Networks "bridge").IPAddress}}' my-nginx  # 取得 bridge IP
 docker stats                               # 即時監控（CPU、記憶體）
 docker top my-nginx                        # 查看容器內程序
 ```
@@ -181,7 +181,7 @@ docker top my-nginx                        # 查看容器內程序
 | image prune | Dangling images |
 | system prune | 全面清理 |
 
-下一堂課：容器資料管理（Volume）。
+下一堂課：Nginx 容器實戰。
 
 ---
 
@@ -192,4 +192,3 @@ docker top my-nginx                        # 查看容器內程序
 3. docker logs 參數表
 4. docker exec vs attach 比較
 5. 清理指令對照表
-

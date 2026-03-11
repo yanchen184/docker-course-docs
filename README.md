@@ -1,73 +1,40 @@
-# React + TypeScript + Vite
+# Docker Course Docs
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Docker course material viewer built with React, TypeScript, and Vite.
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app renders the active course content from `public/docs/` and maps it through `src/App.tsx`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Active Content
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+These files define the active lesson flow rendered by the app, plus the schedule used to keep titles in sync:
+
+- `src/App.tsx`
+- `public/docs/day2-hour1.md` to `public/docs/day2-hour7.md`
+- `public/docs/day2-hour1-full.md` to `public/docs/day2-hour7-full.md`
+- `public/docs/day3-hour8.md` to `public/docs/day3-hour14.md`
+- `public/docs/day3-hour8-full.md` to `public/docs/day3-hour14-full.md`
+- `public/docs/course-schedule.md`
+
+## Supplemental Files
+
+The following files are not rendered directly by the app and should be treated as supporting or archived material unless they are explicitly wired into the UI:
+
+- `public/docs/day2-hour1-outline.md`
+- `public/docs/day2-hour1-script.md`
+- `public/docs/hands-on-labs.md`
+- `public/docs/quizzes-and-breaks.md`
+- `public/docs/notion-export-all.md`
+
+## Validation
+
+```bash
+npm run build
+npm run lint
 ```

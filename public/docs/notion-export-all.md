@@ -1,5 +1,9 @@
 # Docker 課程完整講稿
 
+> Archived reference file.
+> This file is not rendered by the app and may lag behind the active lesson files.
+> Active course content is mapped through `src/App.tsx` and the `dayX-hourY(.md/-full.md)` files.
+
 > 適用於 Notion 匯入
 > 總共 14 小時課程（Day 2 + Day 3）
 

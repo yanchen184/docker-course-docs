@@ -1,4 +1,4 @@
-# Day 3 第十二小時：映像檔最佳化
+# Day 3 第十二小時：Volume 資料持久化
 
 ---
 
@@ -183,7 +183,7 @@ docker run -d --name mysql \
 
 **備份**：用容器 + tar，資料庫用 dump
 
-下一堂：Docker 安全性。
+下一堂：Dockerfile 入門。
 
 ---
 
@@ -193,4 +193,3 @@ docker run -d --name mysql \
 2. 三種掛載方式比較表
 3. -v vs --mount 語法對照
 4. 備份指令範例
-
