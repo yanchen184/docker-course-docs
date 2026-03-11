@@ -390,15 +390,58 @@ docker run -d \
 
 ### 4.10 docker run 完整流程
 
-當你執行 `docker run nginx`：
+當你執行 `docker run nginx`，背後到底發生了什麼事？我們用一張流程圖來看清楚：
 
-1. Docker Client 送請求給 Daemon
-2. Daemon 檢查本機有無 nginx Image
-3. 沒有的話，從 Registry 下載
-4. 用 Image 建立 Container
-5. 分配網路、準備檔案系統
-6. 啟動 Container 內的程序
-7. 連接終端（如果是前景執行）
+```
+docker run nginx
+     │
+     ▼
+Docker Client 送請求給 Daemon
+     │
+     ▼
+本機有 nginx Image 嗎？
+     │
+     ├── ✅ 有 ──────────────────────────┐
+     │                                   │
+     └── ❌ 沒有                          │
+          │                              │
+          ▼                              │
+     去 Docker Hub 找這個 Image           │
+          │                              │
+          ├── ✅ 找到了                    │
+          │    │                          │
+          │    ▼                          │
+          │   下載 Image 到本機            │
+          │    │                          │
+          │    └──────────────────────────┤
+          │                              │
+          └── ❌ 找不到                    │
+               │                         │
+               ▼                         ▼
+          返回錯誤訊息              用 Image 建立 Container
+          （流程結束）                    │
+                                         ▼
+                                    分配網路、準備檔案系統
+                                         │
+                                         ▼
+                                    啟動 Container 內的程序
+                                         │
+                                         ▼
+                                    連接終端（如果是前景執行）
+```
+
+**找不到 Image 時的錯誤訊息長這樣：**
+
+```bash
+$ docker run hello123456
+Unable to find image 'hello123456:latest' locally
+docker: Error response from daemon: pull access denied for hello123456,
+repository does not exist or may require 'docker login' to access.
+```
+
+Docker 會先告訴你本機找不到（`Unable to find image ... locally`），然後去 Docker Hub 也找不到，最後報錯。所以你看到這個錯誤，就知道是映像檔名稱打錯了，或者是私有映像檔需要先 `docker login`。
+
+**整個流程的重點就是這個判斷邏輯：先找本機 → 再找 Hub → 都沒有就報錯。** 理解這個流程後，以後遇到 pull 失敗的問題，你就知道該從哪裡排查了。
 
 ---
 
