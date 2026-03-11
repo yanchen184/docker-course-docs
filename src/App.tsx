@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -186,6 +186,39 @@ function App() {
     setExpandedHours(prev => new Set([...prev, hourId]))
   }
 
+  // Draggable divider state (percentage for outline panel width)
+  const [outlineWidth, setOutlineWidth] = useState(50)
+  const isDragging = useRef(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const pct = (x / rect.width) * 100
+      setOutlineWidth(Math.min(Math.max(pct, 15), 85))
+    }
+    const handleMouseUp = () => {
+      isDragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
   // Get current hour title
   const currentHour = COURSE_DATA.flatMap(d => d.hours).find(h => h.id === selectedHour)
 
@@ -268,9 +301,9 @@ function App() {
       </nav>
 
       {/* Main Content Area - Two Columns */}
-      <div className="ml-72 flex-1 flex">
+      <div ref={containerRef} className="ml-72 flex-1 flex relative">
         {/* Outline Panel (Left) */}
-        <main className="w-1/2 h-screen overflow-y-auto border-r border-slate-700 p-6">
+        <main style={{ width: `${outlineWidth}%` }} className="h-screen overflow-y-auto border-r border-slate-700 p-6 flex-shrink-0">
           <div className="mb-4 pb-3 border-b border-slate-700">
             <span className="text-xs font-medium text-blue-400 uppercase tracking-wider">大綱</span>
             <h2 className="text-lg font-bold text-white mt-1">{currentHour?.title}</h2>
@@ -302,8 +335,14 @@ function App() {
           </article>
         </main>
 
+        {/* Draggable Divider */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="w-1.5 h-screen bg-slate-700 hover:bg-blue-500 cursor-col-resize flex-shrink-0 transition-colors"
+        />
+
         {/* Script Panel (Right) */}
-        <aside className="w-1/2 h-screen overflow-y-auto p-6 bg-slate-950">
+        <aside style={{ width: `${100 - outlineWidth}%` }} className="h-screen overflow-y-auto p-6 bg-slate-950 flex-shrink-0">
           <div className="mb-4 pb-3 border-b border-slate-700">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">逐字稿</span>
