@@ -447,9 +447,32 @@ root@abc123:/# whoami
 | `exit` | 停止容器並退出（容器整個關掉了） |
 | `Ctrl + P + Q` | 退出但容器繼續在背景執行（人走了，容器還在跑） |
 
-大家注意聽清楚這兩個的差別。如果你打 `exit`，不只是退出來而已，容器會被**停止**。你之後用 `docker ps` 看不到它了。
+大家注意聽清楚這兩個的差別。
 
-但如果你按 `Ctrl + P + Q`（先按住 Ctrl，然後依序按 P 和 Q），你只是「離開」了容器，容器本身還在背景繼續運行。之後你可以再用 `docker exec` 回到這個容器裡面，這個下堂課會教。
+你可能會問：「`exit` 不就是離開嗎？為什麼容器會停掉？」
+
+這要回到我們第二堂課講的觀念：**容器本質就是一個 process**。當你用 `docker run -it ubuntu /bin/bash` 進入容器，容器裡面長這樣：
+
+```
+Container 裡：
+PID 1 = /bin/bash    ← 這是容器裡唯一的 process
+```
+
+bash 就是這個容器的 PID 1，也是唯一在跑的東西。你打 `exit`，bash 這個 process 就結束了。PID 1 沒了，容器裡面已經沒有任何 process 在跑了——**容器自然就停了**。不是「離開後被關機」，而是容器裡已經空了，它沒有繼續存在的理由。
+
+那為什麼 `Ctrl + P + Q` 不會停止容器？因為你只是**斷開了終端連線**，bash 還在容器裡面繼續跑著。PID 1 還活著，容器就不會停。
+
+```
+exit 的情況：
+
+你 ──exit──→ bash 結束 → PID 1 沒了 → 容器停止
+
+Ctrl+P+Q 的情況：
+
+你 ──斷開連線──→ bash 還在跑 → PID 1 還活著 → 容器繼續運行
+```
+
+之後你可以再用 `docker exec` 回到這個容器裡面，這個下堂課會教。
 
 **所以記住：想暫時離開容器但不想關掉它，用 `Ctrl + P + Q`。想直接結束容器，用 `exit`。**
 
@@ -826,10 +849,93 @@ docker kill <CONTAINER_ID>       # 強制停止容器
 
 **`stop` 和 `kill` 的區別很重要：**
 
-- `docker stop`：發送 SIGTERM 信號，給容器一個收尾的機會。容器裡面的應用程式收到這個信號後，可以做一些清理工作（比如關閉資料庫連線、寫入快取到磁碟等），然後自己優雅地退出。如果 10 秒內沒有退出，Docker 才會強制殺掉它。
-- `docker kill`：直接發送 SIGKILL 信號，相當於拔電源，立即終止，不給容器任何反應時間。
+- `docker stop`：發送 **SIGTERM** 信號，給容器一個收尾的機會。容器裡面的應用程式收到這個信號後，可以做一些清理工作（比如關閉資料庫連線、寫入快取到磁碟等），然後自己優雅地退出。如果 10 秒內沒有退出，Docker 才會強制殺掉它。
+- `docker kill`：直接發送 **SIGKILL** 信號，相當於拔電源，立即終止，不給容器任何反應時間。
 
 一般情況下用 `stop` 就好。只有在容器卡死、`stop` 等很久都沒反應的時候，才用 `kill` 強制終止。
+
+**補充：Linux Signal（信號）速查表**
+
+Docker 的 stop 和 kill 背後其實是 Linux 的 signal 機制。了解這些 signal，以後排查容器異常退出的問題會很有幫助：
+
+| Signal | 編號 | 效果 | Process 能攔截嗎 |
+|--------|------|------|-----------------|
+| **SIGTERM** | 15 | 「請你結束」— 通知 process 優雅關閉 | ✅ 能，可以做清理工作再退出 |
+| **SIGKILL** | 9 | 「直接死」— 系統強制殺掉 | ❌ 不能，無條件終止 |
+| **SIGINT** | 2 | 就是你按 `Ctrl+C` | ✅ 能 |
+| **SIGHUP** | 1 | 終端斷開，常用來通知 process 重讀設定檔 | ✅ 能 |
+| **SIGSTOP** | 19 | 暫停 process（對應 `docker pause`） | ❌ 不能 |
+| **SIGCONT** | 18 | 恢復被暫停的 process（對應 `docker unpause`） | ✅ 能 |
+
+**對應到 Docker 指令：**
+
+| Docker 指令 | 送出的 Signal | 效果 |
+|------------|--------------|------|
+| `docker stop` | 先 SIGTERM，10 秒後 SIGKILL | 優雅關閉，超時強殺 |
+| `docker kill` | SIGKILL | 直接強殺 |
+| `docker kill -s SIGTERM` | SIGTERM | 跟 stop 一樣，但不會自動補 SIGKILL |
+| `docker pause` | SIGSTOP（透過 cgroups freezer） | 暫停容器內所有 process |
+| `docker unpause` | SIGCONT | 恢復暫停的容器 |
+| 前景容器按 `Ctrl+C` | SIGINT | 中斷容器 |
+
+所以你看到容器 `Exited (137)` 就是被 SIGKILL 殺的（128 + 9 = 137），`Exited (143)` 就是收到 SIGTERM 後退出的（128 + 15 = 143）。這個退出碼的規則以後 debug 很實用。
+
+**現場示範：實際看到 137 和 143**
+
+光講不夠直觀，我們來實際製造這兩個退出碼，大家跟著做。
+
+先製造 `Exited (143)`——用 `docker stop`（SIGTERM）：
+
+```bash
+docker run -d --name test-stop nginx:alpine
+docker stop test-stop
+docker ps -a -f name=test-stop
+```
+
+你會看到：
+
+```
+CONTAINER ID   IMAGE          STATUS                     NAMES
+abc123def456   nginx:alpine   Exited (143) 2 seconds ago test-stop
+```
+
+143 = 128 + 15，就是 SIGTERM。容器收到「請你結束」的通知，自己優雅退出了。
+
+再來製造 `Exited (137)`——用 `docker kill`（SIGKILL）：
+
+```bash
+docker run -d --name test-kill nginx:alpine
+docker kill test-kill
+docker ps -a -f name=test-kill
+```
+
+你會看到：
+
+```
+CONTAINER ID   IMAGE          STATUS                     NAMES
+def789abc012   nginx:alpine   Exited (137) 2 seconds ago test-kill
+```
+
+137 = 128 + 9，就是 SIGKILL。容器被直接強殺，沒有任何反應時間。
+
+**常見退出碼速查：**
+
+| 退出碼 | 意義 | 常見原因 |
+|--------|------|---------|
+| 0 | 正常結束 | 程式自己執行完畢、`exit` 退出 |
+| 1 | 程式錯誤 | 應用程式拋出未處理的例外 |
+| 137 | SIGKILL（128+9） | `docker kill`、OOM（記憶體不足被系統殺掉） |
+| 143 | SIGTERM（128+15） | `docker stop` |
+| 126 | 權限不足 | 啟動命令沒有執行權限 |
+| 127 | 找不到命令 | CMD 或 ENTRYPOINT 指定的命令不存在 |
+
+以後容器掛了，第一步就是 `docker ps -a` 看退出碼，馬上就能縮小排查方向。
+
+做完記得清理：
+
+```bash
+docker rm test-stop test-kill
+```
 
 當然，你也可以用容器名稱來操作，不一定要用 ID：
 
