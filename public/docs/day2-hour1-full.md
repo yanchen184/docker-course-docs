@@ -561,7 +561,135 @@ Docker 需要一個持續運行的 Docker Daemon，而 Podman 是 daemonless 的
 
 ---
 
-## 六、本堂課小結（5 分鐘）
+## 六、實作 Demo（10 分鐘）
+
+這個部分我們來做兩個小實驗，幫助大家理解容器的運作原理。
+
+### 6.1 觀察 Docker 的 Port Mapping（iptables NAT）
+
+當你執行 `docker run -p 8080:80 nginx` 把容器的 80 port 映射到主機的 8080 port，Docker 是怎麼做到的？答案是：iptables NAT 規則。
+
+讓我們來看一下：
+
+```bash
+# 先啟動一個 nginx 容器
+docker run -d --name web -p 8080:80 nginx:alpine
+
+# 查看 iptables NAT 規則
+sudo iptables -t nat -L -n
+```
+
+你會看到類似這樣的輸出：
+
+```
+Chain DOCKER (2 references)
+target     prot opt source               destination
+RETURN     0    --  0.0.0.0/0            0.0.0.0/0
+DNAT       6    --  0.0.0.0/0            0.0.0.0/0            tcp dpt:8080 to:172.17.0.2:80
+```
+
+這行的意思是：
+- `DNAT`：目標位址轉換（Destination NAT）
+- `tcp dpt:8080`：當有人連到主機的 TCP 8080 port
+- `to:172.17.0.2:80`：把流量轉發到容器的 IP（172.17.0.2）的 80 port
+
+這就是 Docker port mapping 的底層原理——它利用 Linux 核心的 iptables 來做網路位址轉換。當外部流量進來時，iptables 會把目標位址從主機改成容器的內部 IP。
+
+```bash
+# 清理實驗容器
+docker stop web && docker rm web
+```
+
+### 6.2 觀察 Docker Build 的中間層
+
+Docker Image 是分層的，每一行 Dockerfile 指令都會產生一個新的層。讓我們來實際看看。
+
+先建立一個簡單的 Dockerfile：
+
+```bash
+mkdir -p /tmp/demo && cd /tmp/demo
+cat > Dockerfile << 'EOF'
+FROM alpine:latest
+RUN apk add --no-cache curl
+RUN apk add --no-cache vim
+RUN echo "Hello Docker" > /hello.txt
+CMD ["cat", "/hello.txt"]
+EOF
+```
+
+現在來 build 這個 image：
+
+```bash
+docker build -t demo:v1 .
+```
+
+你會看到每個 RUN 指令都會產生一個 Step，而且每個 Step 結束後都會顯示一個 SHA256 的 hash。這些 hash 就是中間層的 ID。
+
+現在來看所有的 image 層（包括中間層）：
+
+```bash
+docker images -a
+```
+
+你可能會看到一些 `<none>:<none>` 的 image，這些就是中間層（intermediate layers）。
+
+**為什麼要理解這個？**
+
+1. **Build 快取**：當你修改 Dockerfile 時，Docker 會從第一個變動的指令開始重新 build，之前的層會使用快取。所以把不常變動的指令放前面，常變動的放後面，可以大幅加速 build 時間。
+
+2. **Dangling Images**：那些 `<none>:<none>` 的 image 叫做 dangling images（懸掛映像檔）。當你重新 build 同一個 tag 時，舊的層會變成 dangling。久而久之會佔用磁碟空間。
+
+清理 dangling images：
+
+```bash
+docker image prune
+```
+
+這會刪除所有沒有被任何 image 使用的中間層，釋放磁碟空間。
+
+```bash
+# 清理實驗
+docker rmi demo:v1
+rm -rf /tmp/demo
+```
+
+---
+
+## 七、為什麼要學 Kubernetes（5 分鐘）
+
+在結束之前，我想稍微提一下 Kubernetes，幫大家建立一個更完整的學習路線圖。
+
+**Docker 的定位**
+
+Docker 是一個**單機工具**。它解決的是「如何在一台機器上運行和管理容器」的問題。
+
+但在真實的生產環境中，你可能有幾十、幾百、甚至幾千台機器。這時候問題就來了：
+
+- 如何決定一個容器要跑在哪台機器上？
+- 如果一台機器掛了，上面的容器怎麼辦？
+- 如何做負載均衡，把流量分配到多個容器？
+- 如何做滾動更新，不中斷服務的情況下升級？
+- 如何管理跨機器的網路和儲存？
+
+這些問題，Docker 本身是沒辦法解決的。
+
+**Kubernetes 的角色**
+
+Kubernetes（簡稱 K8s）是 Google 開源的**容器編排平台**。它解決的是「如何在多台機器上運行和管理大量容器」的問題。
+
+你可以把 Docker 想像成貨輪上的集裝箱，Kubernetes 則是管理整個港口的系統——決定哪個集裝箱放到哪艘船、如何調度、如何確保貨物安全送達。
+
+**學習路線建議**
+
+1. **先學好 Docker**：這是基礎。包括 image、container、volume、network、Dockerfile、docker compose
+2. **再學 Kubernetes**：當你需要管理多機環境、做自動化部署時
+3. **最後學 CI/CD**：把 Docker 和 Kubernetes 整合到持續整合/持續部署流程中
+
+本課程聚焦在 Docker 單機的核心能力。把 Docker 學扎實了，之後學 Kubernetes 會輕鬆很多。
+
+---
+
+## 八、本堂課小結（5 分鐘）
 
 好，讓我們來總結一下今天第一個小時學到的內容。
 
@@ -583,12 +711,23 @@ Docker 需要一個持續運行的 Docker Daemon，而 Podman 是 daemonless 的
 - 核心三元素：Image（映像檔）、Container（容器）、Registry（倉庫）
 - Client-Server 架構：Docker Client、Docker Daemon、Docker Registry
 
+**實作重點**
+
+- Docker port mapping 的底層是 iptables NAT 規則
+- Docker image 是分層的，每個 Dockerfile 指令產生一層
+- `docker images -a` 可以看到所有層，包括中間層
+- `docker image prune` 可以清理 dangling images
+
 **Docker 帶來的四大優勢（DevOps 視角）**
 
 1. **更快速的交付和部署**：傳統方式要寫一堆安裝文件、手動配置環境。用了 Docker 之後，打包映像檔、發布測試、一鍵運行，部署時間從幾小時縮短到幾分鐘。
 2. **更便捷的升級和擴縮容**：要升級服務？更新映像檔就好。要水平擴展？在新伺服器上拉下映像檔直接運行，像搭積木一樣簡單。
 3. **更簡單的系統運維**：開發、測試、生產環境高度一致，徹底消除「在我電腦上可以跑」的問題。
 4. **更高效的資源利用**：Docker 是核心層級的虛擬化，不需要 Hypervisor。一台伺服器上原本只能跑幾台虛擬機，用容器可能跑幾十甚至上百個服務，把伺服器的效能壓榨到極致。
+
+**學習路線**
+
+Docker（單機） → Kubernetes（多機編排） → CI/CD（自動化流程）
 
 下一個小時，我們會更深入地了解 Docker 的架構和工作原理。第三個小時，我們就要開始動手安裝 Docker，正式進入實作環節。
 
@@ -606,3 +745,6 @@ Docker 需要一個持續運行的 Docker Daemon，而 Podman 是 daemonless 的
 4. 數據比較表（啟動時間、大小、效能、數量）
 5. Docker 三元素關係圖（Image → Container, Registry ↔ Image）
 6. Docker 架構圖（Client → Daemon → Registry）
+7. iptables NAT 規則示意圖（DNAT 流程）
+8. Docker Image Layer 分層示意圖
+9. 學習路線圖（Docker → K8s → CI/CD）
