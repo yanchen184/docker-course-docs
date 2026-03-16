@@ -34,13 +34,13 @@ const COURSE_DATA: Day[] = [
     id: 'day3',
     title: 'Day 3：Docker 進階',
     hours: [
-      { id: 'day3-hour8', title: '第八小時：映像檔深入理解', outlineFile: 'day3-hour8.md', scriptFile: 'day3-hour8-full.md' },
-      { id: 'day3-hour9', title: '第九小時：容器生命週期管理', outlineFile: 'day3-hour9.md', scriptFile: 'day3-hour9-full.md' },
-      { id: 'day3-hour10', title: '第十小時：容器網路基礎', outlineFile: 'day3-hour10.md', scriptFile: 'day3-hour10-full.md' },
-      { id: 'day3-hour11', title: '第十一小時：Port Mapping 進階', outlineFile: 'day3-hour11.md', scriptFile: 'day3-hour11-full.md' },
-      { id: 'day3-hour12', title: '第十二小時：Volume 資料持久化', outlineFile: 'day3-hour12.md', scriptFile: 'day3-hour12-full.md' },
-      { id: 'day3-hour13', title: '第十三小時：Dockerfile 入門', outlineFile: 'day3-hour13.md', scriptFile: 'day3-hour13-full.md' },
-      { id: 'day3-hour14', title: '第十四小時：Dockerfile 實戰與課程總結', outlineFile: 'day3-hour14.md', scriptFile: 'day3-hour14-full.md' },
+      { id: 'day3-hour8', title: '第八小時：Volume 資料持久化', outlineFile: 'day3-hour8.md', scriptFile: 'day3-hour8-full.md' },
+      { id: 'day3-hour9', title: '第九小時：容器網路與 Port Mapping 進階', outlineFile: 'day3-hour9.md', scriptFile: 'day3-hour9-full.md' },
+      { id: 'day3-hour10', title: '第十小時：Dockerfile 基礎', outlineFile: 'day3-hour10.md', scriptFile: 'day3-hour10-full.md' },
+      { id: 'day3-hour11', title: '第十一小時：Dockerfile 進階與最佳化', outlineFile: 'day3-hour11.md', scriptFile: 'day3-hour11-full.md' },
+      { id: 'day3-hour12', title: '第十二小時：Dockerfile 實戰與映像檔發佈', outlineFile: 'day3-hour12.md', scriptFile: 'day3-hour12-full.md' },
+      { id: 'day3-hour13', title: '第十三小時：Docker Compose 基礎與進階', outlineFile: 'day3-hour13.md', scriptFile: 'day3-hour13-full.md' },
+      { id: 'day3-hour14', title: '第十四小時：Docker Compose 實戰與課程總結', outlineFile: 'day3-hour14.md', scriptFile: 'day3-hour14-full.md' },
     ]
   }
 ]
