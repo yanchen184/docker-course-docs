@@ -31,31 +31,13 @@
 
 ### 2.1 從一個災難故事說起
 
-各位，在正式講 Volume 之前，我先跟你們說一個故事。
+各位，在正式講 Volume 之前，我先問大家一個問題：如果你把一個 MySQL 容器刪掉，裡面的資料會怎樣？
 
-這是我以前同事的真實經歷。他們公司有一個小型的內部系統，後端用 Node.js，資料庫用 MySQL，全部跑在 Docker 容器裡。有一天，MySQL 需要從 5.7 升級到 8.0，因為新版本修了一些安全漏洞。
+答案是：**全部消失。**
 
-我那個同事的想法很單純——把舊的 MySQL 容器停掉、刪掉，然後用 MySQL 8.0 的 Image 跑一個新容器就好了嘛。
+這是 Docker 初學者最容易踩到的坑。很多人以為資料庫的資料就是存在硬碟上，容器刪了資料應該還在。但在 Docker 的世界裡，容器刪除時，裡面所有寫入的資料都會跟著一起消失。
 
-於是他就執行了：
-
-```bash
-docker stop mysql-prod
-docker rm mysql-prod
-docker run -d --name mysql-prod -e MYSQL_ROOT_PASSWORD=xxx mysql:8.0
-```
-
-然後呢？
-
-**所有資料都沒了。**
-
-整個資料庫，幾萬筆客戶資料、訂單記錄、產品目錄，全部歸零。因為舊的容器被刪掉的時候，裡面存的資料也跟著一起消失了。
-
-那天下午，整個辦公室的氣氛都凝固了。大家開始翻備份，結果發現最近的備份是三個月前的。三個月的資料，就這樣沒了。
-
-你們可能覺得「怎麼會這麼粗心」，但說實話，如果你不理解 Docker 的儲存機制，這種事情真的很容易發生。因為在一般的認知裡，資料庫的資料就是存在硬碟上，怎麼可能說沒就沒？但在 Docker 的世界裡，事情不是這樣運作的。
-
-所以今天這堂課，我要讓你們徹底搞懂 Docker 的資料儲存機制，這樣你就永遠不會犯這個錯誤。
+所以今天這堂課，我要讓你們徹底搞懂 Docker 的資料儲存機制，學會用 Volume 來保護你的資料。
 
 ### 2.2 容器的讀寫層
 
@@ -63,99 +45,9 @@ docker run -d --name mysql-prod -e MYSQL_ROOT_PASSWORD=xxx mysql:8.0
 
 當你執行 `docker rm` 刪除一個容器的時候，這個讀寫層就跟著一起被刪掉了。裡面所有的資料——不管是新增的檔案、修改的設定、還是資料庫寫入的資料——全部都沒了。
 
-這就是為什麼我們今天要學 Volume。我們先來做一個實驗，讓你親眼看到這件事。
+這就是為什麼我們今天要學 Volume。等一下的實作環節，我們會親手做一次完整的對比實驗，讓你親眼看到「沒有 Volume 資料就沒了」和「有 Volume 資料就安全了」的差別。
 
-### 2.3 實際演示：資料消失
-
-來，跟我一起操作。我們先啟動一個 MySQL 容器，注意，這裡**故意不用 Volume**：
-
-```bash
-docker run -d \
-  --name mysql-no-volume \
-  -e MYSQL_ROOT_PASSWORD=test123 \
-  -e MYSQL_DATABASE=myapp \
-  mysql:8.0
-```
-
-MySQL 啟動需要一點時間做初始化，大概等個 15 到 20 秒。你可以用 `docker logs` 來看它的啟動進度：
-
-```bash
-docker logs -f mysql-no-volume
-```
-
-看到類似 `ready for connections` 的訊息就表示啟動完成了，按 `Ctrl+C` 退出日誌。
-
-好，現在我們進去 MySQL 寫一些資料：
-
-```bash
-docker exec -it mysql-no-volume mysql -uroot -ptest123
-```
-
-進入 MySQL 命令列之後，執行：
-
-```sql
-USE myapp;
-CREATE TABLE employees (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  name VARCHAR(100),
-  department VARCHAR(50)
-);
-INSERT INTO employees (name, department) VALUES
-  ('張三', '工程部'),
-  ('李四', '行銷部'),
-  ('王五', '財務部');
-SELECT * FROM employees;
-```
-
-你會看到輸出：
-
-```
-+----+--------+-----------+
-| id | name   | department|
-+----+--------+-----------+
-|  1 | 張三   | 工程部     |
-|  2 | 李四   | 行銷部     |
-|  3 | 王五   | 財務部     |
-+----+--------+-----------+
-3 rows in set (0.00 sec)
-```
-
-很好，三筆資料都在。現在輸入 `EXIT;` 離開 MySQL。
-
-接下來，我要模擬那個悲劇的場景了。把容器停掉、刪掉：
-
-```bash
-docker stop mysql-no-volume
-docker rm mysql-no-volume
-```
-
-好，容器沒了。現在我們用同樣的指令重新跑一個新容器：
-
-```bash
-docker run -d \
-  --name mysql-no-volume \
-  -e MYSQL_ROOT_PASSWORD=test123 \
-  -e MYSQL_DATABASE=myapp \
-  mysql:8.0
-```
-
-等它啟動完成後，進去查資料：
-
-```bash
-docker exec -it mysql-no-volume mysql -uroot -ptest123 -e "SELECT * FROM myapp.employees;"
-```
-
-你猜會看到什麼？
-
-```
-ERROR 1146 (42S02): Table 'myapp.employees' doesn't exist
-```
-
-**Table 不存在。** 不只是資料沒了，連 Table 都不在了。因為你剛才建的那個 Table 和寫入的資料，全部都是存在舊容器的讀寫層裡面，而那個讀寫層已經隨著 `docker rm` 一起被刪除了。
-
-這就是為什麼我們需要 Volume。
-
-### 2.4 比喻時間：便利貼 vs 筆記本
+### 2.3 比喻時間：便利貼 vs 筆記本
 
 我來打一個比方，幫大家記住這個概念。
 
@@ -620,14 +512,7 @@ volume123
 
 ### 5.1 步驟一：不用 Volume 啟動 MySQL（重現問題）
 
-好，這個我們在前面演示過了，但現在我們要完整走一遍流程。如果你前面已經做過了，先把之前的容器清掉：
-
-```bash
-docker stop mysql-no-volume 2>/dev/null
-docker rm mysql-no-volume 2>/dev/null
-```
-
-啟動一個**沒有 Volume** 的 MySQL：
+好，前面講了那麼多概念，現在我們來親手做一次對比實驗。先啟動一個**沒有 Volume** 的 MySQL：
 
 ```bash
 docker run -d \
