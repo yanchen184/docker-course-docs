@@ -53,62 +53,106 @@
 
 大家消化一下這個概念。有沒有問題？
 
-### 2.2 -v 掛載語法
+### 2.2 三種掛載方式
 
-好，那 Volume 具體怎麼用呢？Docker 用 `-v` 這個參數來把外部儲存掛載到容器裡面。語法長這樣：
-
-```bash
-docker run -v my-data:/data nginx:alpine
-```
-
-冒號左邊是來源（Volume 名稱或主機路徑），冒號右邊是容器內的掛載目錄。這行指令的意思是：把名為 `my-data` 的 Volume，掛載到容器裡面的 `/data` 目錄。
-
-這裡有一個非常非常重要的規則，很多初學者在這裡搞混——**Docker 怎麼分辨冒號左邊寫的是 Volume 名稱還是主機路徑？**
-
-答案是：**看有沒有斜線開頭。**
-
-```bash
-# 這是 Volume —— my-data 沒有斜線開頭，Docker 認為它是 Volume 名稱
-docker run -v my-data:/data nginx
-
-# 這是 Bind Mount —— /home/user/data 是絕對路徑，斜線開頭
-docker run -v /home/user/data:/data nginx
-
-# 這也是 Bind Mount —— $(pwd) 會展開成絕對路徑
-docker run -v $(pwd)/html:/data nginx
-```
-
-一定要記住這個規則。沒有斜線開頭的就是 Volume 名稱，有斜線開頭的就是主機路徑。如果你不小心把 Volume 名稱寫成了帶斜線的路徑，或者反過來，行為會完全不同，debug 半天才會發現問題出在這裡。
-
-還有一個小知識：如果你指定的 Volume 不存在，Docker 會在 `docker run` 的時候自動幫你建立。所以你可以直接寫 `-v my-data:/data`，不用先手動 `docker volume create`。當然，先手動建好也行，看你的習慣。
-
-### 2.3 三種掛載方式速覽
-
-Docker 提供三種掛載方式，我先用一張表讓大家有個全貌，等一下我們會深入講 Volume：
+好，那要怎麼把資料從容器裡面「抽出來」？Docker 提供三種掛載方式，我先讓大家有個全貌：
 
 | 類型 | 說明 | 適用場景 |
 |------|------|---------|
-| **Volume** | Docker 自己管理的儲存空間，存在 `/var/lib/docker/volumes/` | **生產環境持久化（最推薦）** |
-| **Bind Mount** | 直接映射主機上的具體目錄 | 開發環境即時同步 |
+| **Volume** | Docker 自己管理的儲存空間 | **生產環境持久化（最推薦）** |
+| **Bind Mount** | 直接映射你指定的主機目錄 | 開發環境即時同步 |
 | **tmpfs** | 存在記憶體裡，不寫磁碟，容器停止就消失 | 敏感資料暫存（特殊用途） |
 
-**一句話記住原則：開發用 Bind Mount，生產用 Volume。** tmpfs 是比較特殊的用途，一般日常不太會碰到，知道有這個東西就好。
+tmpfs 是比較特殊的用途，一般日常不太會碰到，知道有這個東西就好。今天的重點是 **Volume** 和 **Bind Mount**。
 
-有人可能會問：為什麼開發要用 Bind Mount、生產要用 Volume？反正兩個都能掛載資料，有差嗎？
+### 2.3 -v 掛載語法
 
-差別很大。
+這兩種掛載都用 `-v` 這個參數，語法長得一模一樣：
 
-**Bind Mount 適合開發，是因為你需要用 IDE 直接改檔案。** 昨天做 Nginx 自訂首頁的時候，大家用的就是 Bind Mount——把主機上的 `html` 目錄映射到容器裡面，你用 VS Code 改 HTML，容器裡的 Nginx 立刻就能讀到新的內容。檔案就在你的專案目錄下，IDE 直接開、git 直接管，開發流程非常順暢。
+```bash
+docker run -v 左邊:右邊 nginx:alpine
+```
 
-那 Volume 呢？Volume 的檔案存在 `/var/lib/docker/volumes/xxx/_data` 裡面。就算是具名 Volume，路徑也是 `/var/lib/docker/volumes/mysql-data/_data`——你不太可能開 IDE 去這個路徑下寫程式吧？而且如果你用的是 macOS 或 Windows，這個路徑根本在 Docker 的虛擬機裡面，主機上是看不到的。Linux 上雖然看得到，但要 root 權限才能存取。所以 Volume 拿來當開發目錄，體驗很差。
+冒號右邊是容器內的掛載目錄，這沒什麼好說的。重點是**冒號左邊**——左邊寫什麼，決定了 Docker 用哪種掛載方式。
 
-**Volume 適合生產，是因為它不依賴主機的目錄結構。** Bind Mount 必須指定一個具體的主機路徑，像 `/home/user/project/data`——換一台伺服器，路徑就可能不一樣了。Volume 是 Docker 自己管理的，不管在哪台機器，`docker run -v mysql-data:/var/lib/mysql` 都能用。而且 Volume 在 Linux 上的效能比 Bind Mount 好（macOS 和 Windows 上差距更大，因為 Bind Mount 需要做檔案系統轉譯），可以用 `docker volume` 指令統一管理、備份、遷移，也不會意外暴露主機的檔案系統給容器。
+```bash
+# Bind Mount —— 左邊是主機路徑（斜線開頭）
+docker run -v /home/user/html:/data nginx
 
-所以簡單說：**Bind Mount 方便你改 code，Volume 方便 Docker 管資料。** 各有各的適用場景。
+# Volume —— 左邊是 Volume 名稱（沒有斜線開頭）
+docker run -v my-data:/data nginx
+```
 
-今天要學的 Volume 重點是：讓資料的生命週期跟容器徹底脫鉤。容器刪了，Volume 裡的資料還在。這在生產環境是絕對必要的。
+**判斷規則就一條：冒號左邊有斜線開頭，就是 Bind Mount；沒有斜線開頭，就是 Volume。**
 
-好，理論講到這裡。接下來我們直接用 MySQL 來做一次完整的對比實驗。大家跟著我一起操作，親眼看到「沒有 Volume 資料就沒了」和「有 Volume 資料就還在」的差別。
+看起來語法幾乎一樣對不對？就差一個斜線。但這兩個東西的行為完全不同，不只是名字不同而已。
+
+### 2.4 Volume 和 Bind Mount 的差異
+
+有同學可能會想：不就是把資料掛出來嗎？幹嘛搞兩個名字？
+
+因為背後的儲存機制完全不同：
+
+| | Bind Mount | Volume |
+|--|-----------|--------|
+| **資料存在哪** | 你指定的主機路徑（你完全控制） | Docker 管理的路徑（`/var/lib/docker/volumes/...`） |
+| **誰管理** | 你自己管（用檔案總管、ls、rm） | Docker 管（用 `docker volume` 指令） |
+| **可攜性** | 綁死主機路徑，換台機器路徑可能不對 | 跟主機路徑無關，哪台機器都能用 |
+| **來源不存在時** | Docker 自動建空目錄（可能踩坑） | Docker 自動建 Volume（正常行為） |
+
+**一句話分辨：Bind Mount 是「你來管」，Volume 是「Docker 幫你管」。**
+
+打個比方。Bind Mount 就像你自己在家裡找一個櫃子存東西，你知道東西在哪、隨時可以去翻。Volume 就像你把東西交給物流公司的倉庫保管——你不用管倉庫地址在哪，需要的時候跟 Docker 說一聲「把 `my-data` 給我」就好。
+
+### 2.5 開發用 Bind Mount，生產用 Volume
+
+**Bind Mount 適合開發，是因為你需要用 IDE 直接改檔案。** 比如說你在開發一個網站，用 Bind Mount 把專案目錄掛進容器：
+
+```bash
+docker run -v $(pwd)/html:/usr/share/nginx/html nginx:alpine
+```
+
+`$(pwd)` 是 shell 語法，會被展開成你目前所在目錄的絕對路徑，所以 Docker 看到的是斜線開頭，判定為 Bind Mount。這樣你用 VS Code 改 HTML，容器裡的 Nginx 立刻就能讀到新的內容。檔案就在你的專案目錄下，IDE 直接開、git 直接管，開發流程非常順暢。
+
+**Volume 適合生產，是因為它不依賴主機的目錄結構。** Bind Mount 必須指定一個具體的主機路徑，像 `/home/user/project/data`——換一台伺服器，路徑就可能不一樣了。Volume 是 Docker 自己管理的，不管在哪台機器，`docker run -v mysql-data:/var/lib/mysql` 都能用。而且 Volume 的檔案存在 `/var/lib/docker/volumes/mysql-data/_data` 裡面——如果你用的是 macOS 或 Windows，這個路徑在 Docker 的虛擬機裡面，主機上根本看不到。Linux 上看得到，但要 root 權限。所以 Volume 拿來當開發目錄體驗很差，但拿來做生產環境的資料持久化剛剛好——你不需要去碰底層檔案，透過 `docker volume` 指令就能管理、備份、遷移。
+
+**簡單記：Bind Mount 方便你改 code，Volume 方便 Docker 管資料。**
+
+還有一個小知識：如果你指定的 Volume 不存在，Docker 會在 `docker run` 的時候自動幫你建立。所以你可以直接寫 `-v my-data:/data`，不用先手動 `docker volume create`。當然，先手動建好也行，看你的習慣。
+
+好，在進入實戰之前，先做一個小測驗，確認大家剛才的概念有聽進去。
+
+> **📝 小測驗 1：Volume 還是 Bind Mount？**
+>
+> 請判斷以下指令用的是 Volume 還是 Bind Mount：
+>
+> 1. `docker run -v mydata:/app nginx`
+> 2. `docker run -v /tmp/data:/app nginx`
+> 3. `docker run -v $(pwd)/config:/app nginx`
+> 4. `docker run -v db-backup:/backup mysql`
+>
+> **答案：**
+> 1. Volume（`mydata` 沒有斜線開頭）
+> 2. Bind Mount（`/tmp/data` 斜線開頭，是主機路徑）
+> 3. Bind Mount（`$(pwd)` 會被 shell 展開成絕對路徑，斜線開頭）
+> 4. Volume（`db-backup` 沒有斜線開頭）
+
+> **📝 小測驗 2：情境題**
+>
+> 以下情境你會選 Volume 還是 Bind Mount？
+>
+> 1. 開發一個 React 專案，希望改完程式碼容器裡立刻生效
+> 2. 生產環境的 MySQL 資料庫，要確保資料不會因為容器刪除而消失
+> 3. 你要把一份 Nginx 設定檔掛進容器，方便隨時在主機上修改測試
+> 4. 部署到客戶的伺服器上，你不確定客戶主機的目錄結構長什麼樣
+>
+> **答案：**
+> 1. Bind Mount（你需要用 IDE 在專案目錄改 code）
+> 2. Volume（生產環境用 Docker 管理，可攜、好備份）
+> 3. Bind Mount（你要在主機上直接編輯那個檔案）
+> 4. Volume（不依賴主機路徑，換台機器一樣能跑）
+
+好，接下來我們直接用 MySQL 來做一次完整的對比實驗，親眼看到「沒有 Volume 資料就沒了」和「有 Volume 資料就還在」的差別。
 
 ---
 

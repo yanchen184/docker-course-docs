@@ -25,24 +25,37 @@ Day2 複習：Image / Container 概念、基礎指令、Port Mapping、Nginx Bin
 - **R/W Layer 會隨著 `docker rm` 一起被刪除**
 - 所有寫入的資料都存在 R/W Layer → 容器刪了就沒了
 
-### 2.2 -v 掛載語法
-
-```bash
-docker run -v my-data:/data nginx:alpine          # Volume
-docker run -v $(pwd)/html:/data nginx:alpine       # Bind Mount
-```
-
-**判斷規則：沒有斜線開頭 = Volume 名稱，有斜線開頭 = 主機路徑**
-
-### 2.3 三種掛載方式速覽
+### 2.2 三種掛載方式
 
 | 類型 | 說明 | 適用場景 |
 |------|------|---------|
 | **Volume** | Docker 管理的儲存空間 | **生產環境持久化（最推薦）** |
-| **Bind Mount** | 直接映射主機目錄 | 開發環境即時同步 |
+| **Bind Mount** | 直接映射你指定的主機目錄 | 開發環境即時同步 |
 | **tmpfs** | 存在記憶體，不寫磁碟 | 敏感資料暫存（特殊用途） |
 
-**原則：開發用 Bind Mount，生產用 Volume。**
+### 2.3 -v 掛載語法
+
+```bash
+docker run -v /home/user/html:/data nginx         # Bind Mount（斜線開頭）
+docker run -v my-data:/data nginx                  # Volume（沒有斜線開頭）
+```
+
+**判斷規則：冒號左邊有斜線開頭 = Bind Mount，沒斜線開頭 = Volume**
+
+### 2.4 Volume 和 Bind Mount 的差異
+
+| | Bind Mount | Volume |
+|--|-----------|--------|
+| 資料存在哪 | 你指定的主機路徑 | Docker 管理的路徑 |
+| 誰管理 | 你自己管 | Docker 管（`docker volume` 指令） |
+| 可攜性 | 綁死主機路徑 | 哪台機器都能用 |
+
+**Bind Mount = 你來管，Volume = Docker 幫你管**
+
+### 2.5 開發用 Bind Mount，生產用 Volume
+
+- Bind Mount：檔案在你的專案目錄，IDE 直接改、git 直接管
+- Volume：Docker 統一管理，不依賴主機目錄結構，適合生產環境
 
 ---
 
