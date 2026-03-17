@@ -243,13 +243,14 @@ docker network disconnect backend-net debug
 docker rm -f debug
 ```
 
-**場景二：滾動更新**
+**場景二：滾動更新（Nginx 1.24 → 1.25）**
 
 ```bash
-docker run -d --name api-v2 --network backend-net api:v2
-# 測試通過後，把舊版從網路移除
-docker network disconnect backend-net api-v1
-docker rm -f api-v1
+docker run -d --name web-v1 --network my-network nginx:1.24-alpine
+docker run -d --name web-v2 --network my-network nginx:1.25-alpine
+# 測試新版沒問題後，移除舊版
+docker network disconnect my-network web-v1
+docker rm -f web-v1
 ```
 
 ### prune 清理

@@ -626,13 +626,18 @@ docker rm -f debug
 
 當你要升級一個服務的時候，可以先啟動新版容器、加入網路、測試通過後，再把舊版容器從網路移除。
 
-```bash
-# 啟動新版 API
-docker run -d --name api-v2 --network backend-net api:v2
+比如說你要把 Nginx 從 1.24 升級到 1.25：
 
-# 測試通過後，把舊版從網路移除
-docker network disconnect backend-net api-v1
-docker rm -f api-v1
+```bash
+# 假設舊版正在跑
+docker run -d --name web-v1 --network my-network nginx:1.24-alpine
+
+# 啟動新版，加入同一個網路
+docker run -d --name web-v2 --network my-network nginx:1.25-alpine
+
+# 測試新版沒問題後，把舊版從網路移除並刪掉
+docker network disconnect my-network web-v1
+docker rm -f web-v1
 ```
 
 ### 4.3 prune 清理
@@ -876,7 +881,7 @@ docker run -d -p 127.0.0.1:3306:3306 mysql:8.0
 
 **方法二：用 Docker 網路替代 Port Mapping**
 
-根本不做 Port Mapping，只用內部網路通訊。這就是我們第三節教的。
+根本不做 Port Mapping，讓 MySQL 只在自訂 bridge 網路裡被其他容器連。就像我們前面做的——MySQL 加入 `backend-net`，API 透過容器名稱 `db` 連它，外部完全碰不到。
 
 **方法三：設定 Docker daemon 不要操作 iptables**
 
